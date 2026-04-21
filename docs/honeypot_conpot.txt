@@ -1,0 +1,132 @@
+====================================================================
+HONEYPOT: CONPOT (ICS / SCADA)
+====================================================================
+
+DESCRIPCIÓN GENERAL
+-------------------
+Conpot es un honeypot de baja interacción especializado en sistemas
+de control industrial (ICS) y SCADA. Simula dispositivos industriales
+reales como PLCs (Controladores Lógicos Programables), HMIs y otros
+equipos que se encuentran en infraestructuras críticas: plantas de
+energía, agua, gas, fábricas, etc.
+
+Su objetivo es detectar a atacantes que realizan reconocimiento o
+intentan explotar sistemas industriales expuestos en internet.
+
+Proyecto original: https://github.com/mushorg/conpot
+Desarrollado y mantenido por el Honeynet Project.
+
+
+INSTALACIÓN
+-----------
+Se usa la imagen oficial del Honeynet Project directamente:
+
+  Imagen: honeynet/conpot:latest  (Docker Hub)
+
+Verificado con `docker pull honeynet/conpot:latest` → OK (a diferencia
+de honeynet/honeytrap, esta imagen sí existe y está mantenida).
+
+El contenedor se llama `honeypot_conpot`.
+No se necesita Dockerfile propio ni configuración adicional.
+La imagen incluye conpot con todas sus plantillas de dispositivos.
+
+
+CONFIGURACIÓN
+-------------
+Conpot utiliza plantillas que definen qué dispositivo industrial se
+simula. Las plantillas están incluidas en la imagen y definen:
+- El tipo de dispositivo (Siemens S7, Guardian AST, etc.)
+- Los registros Modbus y S7 expuestos.
+- Las respuestas SNMP y HTTP de gestión.
+- Los banners de identificación del equipo.
+
+En esta implementación se usa la configuración por defecto de la imagen,
+que simula un dispositivo ICS genérico con soporte para:
+  - Protocolo S7 (Siemens)
+  - Modbus TCP
+  - EtherNet/IP
+
+Los logs se escriben en /var/log/conpot/ dentro del contenedor.
+
+
+PROTOCOLOS SIMULADOS
+--------------------
+Conpot soporta los siguientes protocolos industriales:
+
+  S7comm     → Protocolo propietario Siemens, puerto 102/tcp
+               Usado por PLCs S7-300, S7-400, S7-1200, S7-1500.
+
+  Modbus     → Protocolo industrial estándar, puerto 502/tcp
+               Usado en miles de dispositivos de diferentes fabricantes.
+
+  EtherNet/IP → Protocolo Allen-Bradley/Rockwell, puerto 44818/tcp
+                Usado en PLCs industriales americanos.
+
+  SNMP       → Gestión de red (internamente, para fingerprinting).
+
+  HTTP       → Interfaz web de gestión del dispositivo simulado.
+
+
+PUERTOS EXPUESTOS AL HOST
+--------------------------
+  102/tcp   → S7comm (Siemens S7 protocol)
+  502/tcp   → Modbus TCP
+  44818/tcp → EtherNet/IP (Allen-Bradley)
+
+
+VOLÚMENES
+---------
+  conpot_logs → /var/log/conpot
+    Volumen Docker nombrado. El Collector monta este volumen en
+    modo lectura para procesar los eventos JSON de conpot.
+
+
+DOCKER COMPOSE (extracto)
+--------------------------
+  conpot:
+    image: honeynet/conpot:latest
+    container_name: honeypot_conpot
+    volumes:
+      - conpot_logs:/var/log/conpot
+    ports:
+      - "102:102"
+      - "502:502"
+      - "44818:44818"
+    networks:
+      - honeypot_net
+    restart: unless-stopped
+
+
+QUÉ CAPTURA
+-----------
+- Escaneos de Shodan, Censys y otros buscadores de dispositivos ICS.
+- Intentos de lectura/escritura de registros Modbus (Read/Write Coils,
+  Read Holding Registers, etc.).
+- Peticiones S7 (lectura de bloques de datos, diagnóstico, etc.).
+- Intentos de fingerprinting de dispositivos industriales.
+- Ataques dirigidos a infraestructuras críticas.
+- Actividad de grupos APT que buscan sistemas SCADA.
+
+Este es el honeypot más especializado del stack. La exposición de
+puertos S7 y Modbus en internet atrae específicamente a actores
+interesados en infraestructuras críticas, lo que hace muy valiosa
+la inteligencia que recopila.
+
+
+IMPORTANCIA EN EL CONTEXTO DEL PROYECTO
+-----------------------------------------
+Conpot aporta visibilidad sobre amenazas a sistemas industriales,
+un vector de ataque crítico y creciente. Los registros de Conpot
+permiten:
+- Identificar IPs que realizan reconocimiento de sistemas ICS.
+- Correlacionar con campañas conocidas (Stuxnet-family, Triton, etc.).
+- Detectar patrones de escaneo de puertos industriales (102, 502).
+
+
+PROBLEMAS ENCONTRADOS Y SOLUCIONES
+------------------------------------
+Ninguno. La imagen honeynet/conpot:latest está disponible en Docker Hub
+y funciona directamente sin configuración adicional. Es una de las
+imágenes más robustas del stack.
+
+====================================================================

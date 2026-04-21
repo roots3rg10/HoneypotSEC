@@ -1,0 +1,117 @@
+====================================================================
+HONEYPOT: COWRIE (SSH / Telnet)
+====================================================================
+
+DESCRIPCIÓN GENERAL
+-------------------
+Cowrie es un honeypot de interacción media-alta diseñado para emular
+servidores SSH y Telnet. Registra toda la actividad del atacante:
+intentos de login (usuario/contraseña), comandos ejecutados en la
+shell falsa, y ficheros que intentan descargar. Es uno de los
+honeypots más utilizados en la comunidad de seguridad.
+
+Proyecto original: https://github.com/cowrie/cowrie
+Mantenido activamente por el Honeynet Project.
+
+
+INSTALACIÓN
+-----------
+Se usa la imagen oficial de Docker Hub sin necesidad de compilar nada:
+
+  Imagen: cowrie/cowrie:latest
+
+El contenedor se llama `honeypot_cowrie`. La imagen incluye Python,
+las dependencias de Cowrie y el entorno virtual preconfigurado.
+No se necesita ningún Dockerfile propio.
+
+
+CONFIGURACIÓN
+-------------
+Fichero de configuración: honeypots/cowrie/cowrie.cfg
+Se monta en el contenedor como:
+  /home/cowrie/etc/cowrie.cfg  (solo lectura)
+
+Contenido del cowrie.cfg:
+
+  [honeypot]
+  hostname = srv01                         ← nombre del host falso
+  log_path = var/log/cowrie
+  download_path = var/lib/cowrie/downloads
+  state_path = var/lib/cowrie
+  etc_path = etc
+  contents_path = honeyfs
+  txtcmds_path = txtcmds
+  ttylog = true                            ← graba sesiones TTY completas
+  ttylog_path = var/lib/cowrie/tty
+
+  [output_jsonlog]
+  enabled = true
+  logfile = ${honeypot:log_path}/cowrie.json   ← logs en JSON
+
+  [ssh]
+  enabled = true
+  listen_endpoints = tcp:2222:interface=0.0.0.0
+  version = SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.6  ← banner falso
+
+  [telnet]
+  enabled = true
+  listen_endpoints = tcp:2323:interface=0.0.0.0
+
+Puntos clave:
+- El banner SSH imita OpenSSH 8.9 sobre Ubuntu para ser creíble.
+- Los logs JSON son los que lee el Collector para insertar en BD.
+- ttylog=true almacena sesiones completas reproducibles.
+- El hostname "srv01" aparece en el prompt de la shell falsa.
+
+
+PUERTOS EXPUESTOS AL HOST
+--------------------------
+  2222/tcp  →  SSH honeypot
+  2323/tcp  →  Telnet honeypot
+
+Nota: se usan puertos alternativos (2222 en vez de 22, 2323 en vez
+de 23) para no interferir con el SSH real del host. En un despliegue
+real se redirigen con iptables: puerto 22 del host → 2222 del contenedor.
+
+
+VOLÚMENES
+---------
+  cowrie_logs → /home/cowrie/var/log/cowrie
+    Volumen Docker nombrado que el Collector monta en modo lectura
+    para leer cowrie.json en tiempo real.
+
+
+DOCKER COMPOSE (extracto)
+--------------------------
+  cowrie:
+    image: cowrie/cowrie:latest
+    container_name: honeypot_cowrie
+    volumes:
+      - cowrie_logs:/home/cowrie/var/log/cowrie
+      - ./honeypots/cowrie/cowrie.cfg:/home/cowrie/etc/cowrie.cfg:ro
+    ports:
+      - "2222:2222"
+      - "2323:2323"
+    networks:
+      - honeypot_net
+    restart: unless-stopped
+
+
+QUÉ CAPTURA
+-----------
+- Todos los intentos de autenticación SSH y Telnet (user + pass).
+- Comandos ejecutados en la shell emulada.
+- Intentos de descarga de ficheros (wget, curl, etc.).
+- Huellas de herramientas automáticas de ataque (Mirai, Shodan bots, etc.).
+- Sesiones TTY completas reproducibles para análisis forense.
+
+Los eventos se escriben en cowrie.json en formato NDJSON (una línea
+= un evento), que el Collector parsea e inserta en PostgreSQL.
+
+
+PROBLEMAS ENCONTRADOS Y SOLUCIONES
+------------------------------------
+Ninguno. La imagen oficial cowrie/cowrie:latest está disponible en
+Docker Hub y funciona directamente. Es la imagen más estable del stack.
+
+====================================================================

@@ -1,0 +1,202 @@
+====================================================================
+RESUMEN GLOBAL DEL STACK DE HONEYPOTS
+Plataforma de Honeypots Dockerizada — Contexto para presentación
+====================================================================
+
+ARQUITECTURA GENERAL
+--------------------
+El proyecto es una plataforma de inteligencia de amenazas basada en
+honeypots, totalmente dockerizada. Consta de 11 contenedores que
+trabajan juntos:
+
+  ┌─────────────────────────────────────────────────────────┐
+  │  INTERNET / Red externa                                 │
+  └──────────────┬──────────────────────────────────────────┘
+                 │ puertos expuestos
+  ┌──────────────▼──────────────────────────────────────────┐
+  │  HONEYPOTS (captura de ataques)                         │
+  │  Cowrie :2222/:2323 │ Dionaea :21,42,69,445,1433...     │
+  │  Conpot :102/:502   │ Glastopf :8080  │ Honeytrap       │
+  │  Honeyd (interno)                                        │
+  └──────────────┬──────────────────────────────────────────┘
+                 │ logs JSON en volúmenes Docker
+  ┌──────────────▼──────────────────────────────────────────┐
+  │  COLLECTOR (Python)                                     │
+  │  Lee logs con watchdog, enriquece con GeoIP, inserta BD │
+  └──────────────┬──────────────────────────────────────────┘
+                 │ PostgreSQL
+  ┌──────────────▼──────────────────────────────────────────┐
+  │  BACKEND FastAPI + FRONTEND React + NGINX               │
+  │  Dashboard de visualización en tiempo real (puerto :80) │
+  └─────────────────────────────────────────────────────────┘
+
+
+LOS 7 HONEYPOTS
+---------------
+
+1. COWRIE (SSH/Telnet) ─────────────────────────────────────
+   Tipo: interacción media-alta
+   Imagen: cowrie/cowrie:latest (oficial, sin modificaciones)
+   Puertos: 2222/tcp (SSH), 2323/tcp (Telnet)
+   Captura: credenciales probadas, comandos ejecutados, descargas
+   Config: cowrie.cfg montado en /home/cowrie/etc/cowrie.cfg
+   Estado: funcionando sin problemas
+
+2. DIONAEA (SMB/FTP/Malware) ──────────────────────────────
+   Tipo: baja interacción, captura de malware
+   Imagen: dinotools/dionaea (cambio respecto al build original)
+   Puertos: 21, 42, 69/udp, 445, 1433, 1723, 1883, 3306
+   Captura: exploits SMB, binarios maliciosos, tráfico IoT (MQTT)
+   Config: usa defaults de la imagen (config YAML interno)
+   Problema resuelto: el paquete dionaea no existe en Ubuntu 22.04
+   Estado: funcionando
+
+3. CONPOT (ICS/SCADA) ─────────────────────────────────────
+   Tipo: baja interacción, sistemas industriales
+   Imagen: honeynet/conpot:latest (oficial, sin modificaciones)
+   Puertos: 102/tcp (S7comm), 502/tcp (Modbus), 44818/tcp (EtherNet/IP)
+   Captura: escaneos de sistemas industriales, ataques a PLCs
+   Config: plantillas internas de la imagen
+   Estado: funcionando sin problemas
+
+4. GLASTOPF (Web Honeypot) ────────────────────────────────
+   Tipo: baja interacción, aplicaciones web
+   Imagen: build propio (Python 3.11-slim + Flask)
+   Puerto: 8080/tcp → 80 interno
+   Captura: escaneos web, SQLi, LFI/RFI, acceso a rutas comunes
+   Problema resuelto: Python 2.7 y glastopf original abandonados
+   Solución: reimplementación completa en Python 3 + Flask
+   Estado: funcionando
+
+5. HONEYTRAP (TCP/UDP genérico) ───────────────────────────
+   Tipo: baja interacción, multi-protocolo
+   Imagen: honeytrap/honeytrap:latest (cambio: honeynet→honeytrap)
+   Puertos: internos (ssh 8022, vnc 5900 por defecto imagen)
+   Captura: SSH, Telnet, FTP, HTTP en red interna
+   Config: config.toml en /config/config.toml
+   Problemas resueltos:
+     - Imagen honeynet/honeytrap inexistente → honeytrap/honeytrap
+     - Ruta de datos /var/log/honeytrap → /data/ (según entrypoint)
+     - Formato TOML incorrecto (3 iteraciones de depuración)
+   Estado: funcionando
+
+6. HONEYD (Red Virtual) ───────────────────────────────────
+   Tipo: baja interacción, red virtual multi-host
+   Imagen: build propio (Python 3.11-slim, solo stdlib)
+   Puertos: internos 23/tcp, 25/tcp, 80/tcp
+   Captura: bots Telnet/SMTP, escaneos internos de red
+   Problema resuelto: honeyd no existe en Debian bullseye
+   Solución: reimplementación en Python 3 con asyncio
+   Estado: funcionando
+
+7. COWRIE ya descrito en punto 1.
+
+   (El stack no incluye Glastopf propio de Honeynet ni el Honeyd
+   original dado que ambos están abandonados; se usan reimplementaciones)
+
+
+INFRAESTRUCTURA DE SOPORTE
+---------------------------
+
+BASE DE DATOS — PostgreSQL 15 (postgres:15-alpine)
+  - Tabla `attacks`: almacena todos los eventos de todos los honeypots
+  - Campos: timestamp, honeypot, source_ip, source/dest_port,
+    protocol, country/city/lat/lon, attack_type, user/pass, payload
+  - Índices sobre timestamp, honeypot, source_ip, attack_type, país
+  - Tabla `education_articles`: contenido educativo del dashboard
+  - Healthcheck configurado (pg_isready)
+
+COLLECTOR — Python 3 custom
+  - Monitoriza los ficheros de log con watchdog (inotify)
+  - Parser específico por honeypot (cowrie, dionaea, honeytrap, etc.)
+  - Enriquece cada IP con geolocalización (ip-api.com, caché en RAM)
+  - Inserta en PostgreSQL con reconexión automática
+
+BACKEND — FastAPI + asyncpg
+  - API REST: /api/attacks, /api/stats, /api/education
+  - WebSocket: /ws/attacks (eventos en tiempo real al dashboard)
+  - Endpoint de salud: /api/health
+
+FRONTEND — React + Vite (build estático servido con `serve`)
+  - Dashboard de visualización del stack de honeypots
+
+NGINX — Reverse proxy
+  - Puerto 80: sirve el frontend React
+  - /api/ → backend:8000
+  - /ws/  → backend:8000 (WebSocket)
+
+
+RED DOCKER
+----------
+  Red: honeypot_net (bridge)
+  Todos los contenedores están en la misma red interna.
+  Solo los honeypots y nginx exponen puertos al host.
+  La BD y el backend son completamente internos.
+
+
+CORRECCIONES REALIZADAS DURANTE LA IMPLEMENTACIÓN
+---------------------------------------------------
+
+  Contenedor   | Problema original             | Solución
+  -------------|-------------------------------|---------------------------
+  dionaea      | build desde Ubuntu, paquete   | imagen dinotools/dionaea
+               | no disponible en apt          |
+  honeytrap    | imagen honeynet/honeytrap     | imagen honeytrap/honeytrap
+               | no existe en Docker Hub       |
+  honeytrap    | volumen en /var/log/honeytrap | /data/ (entrypoint real)
+  honeytrap    | formato TOML incorrecto       | inspección del config por
+               | (3 iteraciones)               | defecto de la imagen
+  glastopf     | python:2.7-slim eliminada,    | reimplementación Python 3
+               | glastopf abandonado           | + Flask
+  honeyd       | paquete honeyd no disponible  | reimplementación Python 3
+               | en Debian bullseye            | + asyncio
+  compose      | clave `version` obsoleta      | eliminada
+
+
+FICHEROS DEL PROYECTO (estructura)
+------------------------------------
+  /home/proyecto/
+  ├── docker-compose.yml          ← stack completo
+  ├── .env / .env.example         ← variables de entorno
+  ├── database/
+  │   ├── init.sql                ← esquema de BD
+  │   └── seed.sql                ← datos de ejemplo
+  ├── backend/                    ← FastAPI (Python)
+  ├── collector/                  ← colector de logs (Python)
+  ├── frontend/                   ← dashboard React
+  ├── nginx/nginx.conf            ← config reverse proxy
+  └── honeypots/
+      ├── cowrie/cowrie.cfg
+      ├── dionaea/dionaea.cfg     ← ref. histórica (no usada)
+      ├── honeytrap/config.toml
+      ├── glastopf/
+      │   ├── Dockerfile
+      │   └── honeypot.py        ← reimplementación Python 3
+      └── honeyd/
+          ├── Dockerfile
+          ├── honeypot.py        ← reimplementación Python 3
+          └── honeyd.conf        ← ref. histórica
+
+
+ESTADO FINAL DEL STACK
+-----------------------
+  11/11 contenedores corriendo (docker compose up -d)
+
+  honeypot_db          Up (healthy)
+  honeypot_backend     Up
+  honeypot_collector   Up
+  honeypot_cowrie      Up  :2222, :2323
+  honeypot_dionaea     Up  :21, :42, :69/udp, :445, :1433, :1723, :1883, :3306
+  honeypot_conpot      Up  :102, :502, :44818
+  honeypot_glastopf    Up  :8080
+  honeypot_honeytrap   Up  (red interna)
+  honeypot_honeyd      Up  (red interna)
+  honeypot_frontend    Up  (red interna)
+  honeypot_nginx       Up  :80
+
+  Verificado:
+    GET http://localhost/api/health  → {"status":"ok"}
+    GET http://localhost/           → 200 (dashboard React)
+    GET http://localhost:8080/      → 404 (glastopf activo)
+
+====================================================================

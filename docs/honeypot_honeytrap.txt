@@ -1,0 +1,184 @@
+====================================================================
+HONEYPOT: HONEYTRAP (TCP/UDP Genérico)
+====================================================================
+
+DESCRIPCIÓN GENERAL
+-------------------
+Honeytrap es un honeypot de baja interacción orientado a capturar
+ataques sobre cualquier protocolo TCP/UDP. Su diseño modular permite
+simular múltiples servicios (SSH, Telnet, FTP, HTTP, Redis, etc.)
+escuchando en múltiples puertos simultáneamente sin necesidad de
+stacks completos de protocolo.
+
+Proyecto original: https://github.com/honeytrap/honeytrap
+Desarrollado en Go. Arquitectura basada en listeners, services y channels.
+
+
+INSTALACIÓN
+-----------
+PROBLEMA ENCONTRADO:
+El docker-compose.yml original referenciaba la imagen:
+
+  image: honeynet/honeytrap:latest
+
+Esta imagen NO existe en Docker Hub. El repositorio `honeynet/honeytrap`
+no tiene imagen publicada.
+
+SOLUCIÓN APLICADA:
+Se cambió a la imagen del proyecto honeytrap oficial:
+
+  Imagen: honeytrap/honeytrap:latest  (Docker Hub)
+
+Verificado con `docker pull honeytrap/honeytrap:latest` → OK.
+El contenedor se llama `honeypot_honeytrap`.
+
+
+CONFIGURACIÓN
+-------------
+Fichero de configuración: honeypots/honeytrap/config.toml
+Se monta en el contenedor en: /config/config.toml  (solo lectura)
+
+PROBLEMA CON EL FORMATO TOML:
+El proceso de depuración del config fue el más complejo del stack.
+Se encontraron dos errores diferentes:
+
+ERROR 1 (config inicial con formato incorrecto):
+  toml: cannot load TOML value of type map[string]interface {} into a Go slice
+
+Causa: el config usaba `[logging]` (tabla TOML = map) pero el struct
+de Go espera una slice (array), por lo que debe ser `[[logging]]`.
+
+ERROR 2 (segundo intento, aún incorrecto):
+  El config usaba `[[listener]]` y `[[service]]` en formato array,
+  pero honeytrap espera `[listener]` (tabla única) y `[service.nombre]`
+  (tablas nombradas).
+
+PROCESO DE DIAGNÓSTICO:
+1. Se ejecutó `docker run honeytrap/honeytrap --help` → reveló flags.
+2. Se ejecutó `docker run honeytrap/honeytrap --config /dev/null` →
+   el proceso arranca pero para inmediatamente ("Listener not set").
+   Esto confirmó que el problema era el parsing del TOML, no permisos.
+3. Se inspeccionó el config por defecto embebido en la imagen:
+   `docker run --entrypoint="" honeytrap/honeytrap cat /config/config.toml`
+   Esto reveló el formato correcto:
+   - [listener]         ← tabla singular (no array)
+   - [service.nombre]   ← tablas nombradas
+   - [[port]]           ← arrays para puertos
+   - [channel.nombre]   ← tabla nombrada para output
+   - [[filter]]         ← array
+   - [[logging]]        ← array (¡aquí estaba el error!)
+
+Config final (config.toml):
+
+  [listener]
+  type = "socket"
+
+  [service.ssh-sim]
+  type = "ssh-simulator"
+  credentials = ["root:root", "root:password", "admin:admin"]
+
+  [service.telnet01]
+  type = "telnet"
+  server-name = "Ubuntu-Server"
+
+  [service.ftp01]
+  type = "ftp"
+
+  [service.http01]
+  type = "http"
+
+  [[port]]
+  ports = ["tcp/8022", "tcp/22"]
+  services = ["ssh-sim"]
+
+  [[port]]
+  port = "tcp/23"
+  services = ["telnet01"]
+
+  [[port]]
+  port = "tcp/21"
+  services = ["ftp01"]
+
+  [[port]]
+  port = "tcp/8888"
+  services = ["http01"]
+
+  [channel.file01]
+  type = "file"
+  filename = "/data/honeytrap.json"
+
+  [[filter]]
+  channel = ["file01"]
+
+  [[logging]]
+  output = "/data/honeytrap.log"
+  level = "info"
+
+
+VOLÚMENES Y RUTAS
+-----------------
+El entrypoint del contenedor es:
+  /honeytrap/honeytrap --config /config/config.toml --data /data/
+
+El directorio /data/ es donde honeytrap escribe todos sus datos.
+
+Corrección aplicada en docker-compose.yml:
+- Antes: volumen montado en /var/log/honeytrap  (ruta incorrecta)
+- Después: volumen montado en /data/            (ruta del entrypoint)
+
+  honeytrap_logs → /data/
+    Contiene: honeytrap.json (eventos), honeytrap.log (log del proceso)
+
+
+DOCKER COMPOSE (extracto)
+--------------------------
+  honeytrap:
+    image: honeytrap/honeytrap:latest
+    container_name: honeypot_honeytrap
+    volumes:
+      - honeytrap_logs:/data
+      - ./honeypots/honeytrap/config.toml:/config/config.toml:ro
+    networks:
+      - honeypot_net
+    restart: unless-stopped
+
+Nota: honeytrap no expone puertos directamente al host. Opera en
+la red interna honeypot_net capturando conexiones internas.
+Los puertos por defecto de la imagen son 5900/tcp y 8022/tcp.
+
+
+QUÉ CAPTURA
+-----------
+- Intentos de autenticación SSH (con credenciales falsas configuradas).
+- Sesiones Telnet (banner personalizable).
+- Conexiones FTP.
+- Peticiones HTTP genéricas.
+- Cualquier servicio adicional que se configure en los [[port]].
+- Los eventos se escriben en /data/honeytrap.json (NDJSON).
+
+
+SERVICIOS DISPONIBLES EN HONEYTRAP
+------------------------------------
+La imagen incluye los siguientes tipos de servicio configurables:
+echo, http, adb, counterstrike, ssh-auth, telnet, cwmp, ntp,
+ethereum, copy, dns-proxy, snmp, dns, http-proxy, tftp, docker,
+ftp, ssh-simulator, ipp, redis, ssh-jail, ssh-proxy, vnc,
+memcached, elasticsearch, eos, telnet-lua.
+
+
+PROBLEMAS ENCONTRADOS Y SOLUCIONES
+------------------------------------
+1. Imagen honeynet/honeytrap no existe en Docker Hub.
+   Solución: usar honeytrap/honeytrap:latest.
+
+2. Ruta del volumen de datos incorrecta (/var/log/honeytrap).
+   Solución: cambiar a /data/ según el entrypoint real del contenedor.
+
+3. Formato TOML del config incorrecto (3 intentos hasta dar con el
+   formato exacto):
+   - Intento 1: config con [logging] y [[listener]] → error TOML.
+   - Intento 2: todo en formato array [[...]] → error TOML diferente.
+   - Solución: inspeccionar el config por defecto de la imagen con
+     `docker run --entrypoint=""` para ver el formato exacto esperado.
+
+====================================================================

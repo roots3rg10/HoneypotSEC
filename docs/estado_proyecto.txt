@@ -1,0 +1,497 @@
+====================================================================
+ESTADO ACTUAL DEL PROYECTO
+Plataforma de Honeypots — Guía completa de uso
+Directorio: /home/proyecto
+Fecha: abril 2026
+====================================================================
+
+QUÉ ES ESTE PROYECTO
+---------------------
+Una plataforma de ciberseguridad basada en honeypots completamente
+dockerizada. Su propósito es atraer y registrar ataques reales de
+internet para analizarlos y presentarlos en un dashboard web.
+
+Tiene dos capas:
+  1. Honeypots — "trampas" que simulan servicios vulnerables y
+     capturan todo lo que hace el atacante.
+  2. Dashboard — aplicación web que muestra los ataques en tiempo
+     real, estadísticas y contenido educativo.
+
+
+ESTADO DEL STACK
+----------------
+11 contenedores corriendo. Levantado con: docker compose up -d
+
+  CONTENEDOR           IMAGEN / BUILD           PUERTOS HOST
+  ─────────────────────────────────────────────────────────────
+  honeypot_db          postgres:15-alpine        (interno)
+  honeypot_backend     build ./backend           (interno)
+  honeypot_collector   build ./collector         (interno)
+  honeypot_frontend    build ./frontend          (interno)
+  honeypot_nginx       nginx:alpine              :80
+  honeypot_cowrie      cowrie/cowrie:latest      :2222, :2323
+  honeypot_dionaea     dinotools/dionaea         :21, :42, :69/udp,
+                                                 :445, :1433, :1723,
+                                                 :1883, :3306
+  honeypot_conpot      honeynet/conpot:latest    :102, :502, :44818
+  honeypot_glastopf    build ./honeypots/glastopf :8080
+  honeypot_honeytrap   honeytrap/honeytrap:latest (interno)
+  honeypot_honeyd      build ./honeypots/honeyd   (interno)
+
+Verificado:
+  curl http://localhost/api/health   → {"status":"ok"}
+  curl http://localhost/             → 200 (dashboard React)
+  curl http://localhost:8080/        → 404 (glastopf activo)
+
+
+CÓMO USAR EL PROYECTO
+----------------------
+
+Arrancar todo:
+  cd /home/proyecto
+  docker compose up -d
+
+Parar todo:
+  docker compose down
+
+Ver estado de los contenedores:
+  docker compose ps
+
+Ver logs de un contenedor específico:
+  docker compose logs -f backend
+  docker compose logs -f cowrie
+  docker compose logs -f collector   ← aquí se ve cada ataque en tiempo real
+
+Ver logs de todos a la vez:
+  docker compose logs -f
+
+Reconstruir y reiniciar un servicio tras cambiar código:
+  docker compose build backend && docker compose up -d backend
+
+Reiniciar un servicio sin rebuild:
+  docker compose restart honeytrap
+
+Parar y borrar todo (incluidos volúmenes = se pierden logs y BD):
+  docker compose down -v   ← CUIDADO: borra todos los datos
+
+
+ACCEDER AL DASHBOARD
+---------------------
+Abrir en el navegador: http://localhost
+
+El dashboard tiene:
+  - Pantalla principal: estadísticas en tiempo real (total de ataques,
+    IPs únicas, ataques hoy, mapa de países, timeline por hora,
+    distribución por honeypot, top IPs atacantes, top puertos).
+  - WebSocket activo: los nuevos ataques aparecen sin recargar.
+  - Tabla de ataques: lista completa con filtros por honeypot y país.
+  - Detalle de ataque: al clicar en uno, muestra todos sus campos.
+  - Sección educativa: 8 artículos sobre tipos de ataques y
+    buenas prácticas (nivel principiante, intermedio, avanzado).
+
+
+ACCEDER A LA API REST
+----------------------
+Base URL: http://localhost/api/
+
+Endpoints disponibles:
+
+  GET /api/health
+    → {"status":"ok"}  — comprueba que el backend funciona
+
+  GET /api/attacks?page=1&limit=50
+    → lista paginada de ataques (máx 200 por página)
+    Filtros opcionales: ?honeypot=cowrie  ?country=CN
+
+  GET /api/attacks/{id}
+    → detalle de un ataque por ID
+
+  GET /api/stats/summary
+    → {"total_attacks":N, "unique_ips":N, "attacks_today":N,
+       "top_honeypot":"cowrie", "top_country":"China", ...}
+
+  GET /api/stats/timeline
+    → ataques por hora en las últimas 24h
+
+  GET /api/stats/honeypots
+    → recuento de ataques por honeypot
+
+  GET /api/stats/countries
+    → top 50 países atacantes con coordenadas para el mapa
+
+  GET /api/stats/top-ips
+    → top 20 IPs más activas
+
+  GET /api/stats/top-ports
+    → top 15 puertos más atacados
+
+  GET /api/education
+    → lista de artículos educativos (sin contenido completo)
+
+  GET /api/education/{slug}
+    → artículo completo (ej: /api/education/fuerza-bruta-ssh)
+
+WebSocket: ws://localhost/ws/attacks
+    → stream de nuevos ataques en tiempo real (JSON)
+
+
+ACCEDER A LA BASE DE DATOS
+---------------------------
+Desde el host (si tienes psql instalado):
+  psql -h localhost -p 5432 -U honeypot_user -d honeypot_db
+  Contraseña: honeypot_pass
+  (Solo funciona si se expone el puerto 5432 en docker-compose.yml;
+   actualmente no está expuesto al host por seguridad)
+
+Desde dentro del contenedor:
+  docker exec -it honeypot_db psql -U honeypot_user -d honeypot_db
+
+Consultas útiles:
+  -- Ver últimos 10 ataques
+  SELECT timestamp, honeypot, source_ip, attack_type FROM attacks
+  ORDER BY timestamp DESC LIMIT 10;
+
+  -- Contar ataques por honeypot
+  SELECT honeypot, count(*) FROM attacks GROUP BY honeypot ORDER BY 2 DESC;
+
+  -- Top IPs atacantes
+  SELECT source_ip, count(*) FROM attacks GROUP BY source_ip ORDER BY 2 DESC LIMIT 10;
+
+  -- Ataques de hoy
+  SELECT count(*) FROM attacks WHERE timestamp >= current_date;
+
+
+ESTRUCTURA DE DIRECTORIOS
+--------------------------
+/home/proyecto/
+├── docker-compose.yml          ← definición completa del stack
+├── .env                        ← variables de entorno (credenciales BD, etc.)
+├── .env.example                ← plantilla del .env
+│
+├── database/
+│   ├── init.sql                ← esquema de BD (se ejecuta al crear el contenedor)
+│   └── seed.sql                ← 8 artículos educativos de ejemplo
+│
+├── backend/                    ← API REST (Python / FastAPI)
+│   ├── Dockerfile
+│   ├── requirements.txt        ← fastapi, uvicorn, sqlalchemy, asyncpg, pydantic
+│   ├── main.py                 ← app FastAPI + WebSocket /ws/attacks
+│   ├── database.py             ← conexión SQLAlchemy async a PostgreSQL
+│   ├── models.py               ← modelos ORM: Attack, EducationArticle
+│   ├── schemas.py              ← schemas Pydantic de respuesta de la API
+│   └── routers/
+│       ├── attacks.py          ← GET /api/attacks, GET /api/attacks/{id}
+│       ├── stats.py            ← GET /api/stats/summary|timeline|honeypots|...
+│       └── education.py        ← GET /api/education, GET /api/education/{slug}
+│
+├── collector/                  ← servicio que lee logs y escribe en BD
+│   ├── Dockerfile
+│   ├── requirements.txt        ← watchdog, psycopg2-binary, requests
+│   ├── main.py                 ← monitoriza logs con inotify + inserta en BD
+│   └── parsers/                ← un parser por honeypot
+│       ├── base.py             ← dataclass Event común a todos los parsers
+│       ├── cowrie.py
+│       ├── dionaea.py
+│       ├── honeytrap.py
+│       ├── glastopf.py
+│       ├── conpot.py
+│       └── honeyd.py
+│
+├── frontend/                   ← dashboard React + Vite
+│   ├── Dockerfile              ← build estático, servido con `serve`
+│   ├── package.json            ← React, Vite, Tailwind CSS
+│   ├── vite.config.js
+│   ├── tailwind.config.js
+│   └── src/
+│       ├── App.jsx
+│       ├── main.jsx
+│       ├── services/
+│       │   ├── api.js          ← llamadas a la API REST
+│       │   └── websocket.js    ← conexión WebSocket para tiempo real
+│       ├── components/
+│       │   ├── Dashboard/      ← tarjetas de stats, mapa, gráficas
+│       │   ├── Education/      ← lista y detalle de artículos
+│       │   └── Layout/         ← navbar, sidebar
+│       └── pages/
+│           ├── Dashboard.jsx
+│           ├── Education.jsx
+│           ├── ArticlePage.jsx
+│           └── AttackDetail.jsx
+│
+├── nginx/
+│   └── nginx.conf              ← proxy: / → frontend:3000
+│                                          /api/ → backend:8000
+│                                          /ws/ → backend:8000 (WebSocket)
+│
+├── honeypots/
+│   ├── cowrie/
+│   │   └── cowrie.cfg          ← config: hostname srv01, SSH:2222, Telnet:2323
+│   ├── dionaea/
+│   │   └── dionaea.cfg         ← ref. histórica (no usada; imagen usa sus defaults)
+│   ├── honeytrap/
+│   │   └── config.toml         ← config: socket listener, servicios SSH/Telnet/FTP/HTTP
+│   ├── glastopf/
+│   │   ├── Dockerfile          ← python:3.11-slim + Flask
+│   │   └── honeypot.py         ← captura todas las peticiones HTTP → JSON
+│   └── honeyd/
+│       ├── Dockerfile          ← python:3.11-slim
+│       ├── honeypot.py         ← asyncio: Telnet:23, SMTP:25, HTTP:80
+│       └── honeyd.conf         ← ref. histórica de la config original de honeyd
+│
+└── docs/                       ← documentación generada
+    ├── honeypot_cowrie.txt
+    ├── honeypot_dionaea.txt
+    ├── honeypot_conpot.txt
+    ├── honeypot_glastopf.txt
+    ├── honeypot_honeyd.txt
+    ├── honeypot_honeytrap.txt
+    ├── honeypot_resumen_global.txt
+    └── estado_proyecto.txt     ← este fichero
+
+
+CÓMO FLUYE UN ATAQUE POR EL SISTEMA
+--------------------------------------
+Ejemplo con un ataque SSH a Cowrie:
+
+  1. Atacante intenta conectar por SSH al puerto 2222 del host.
+
+  2. Docker redirige → honeypot_cowrie (puerto 2222 interno).
+
+  3. Cowrie simula un servidor SSH real:
+     - El atacante ve un banner SSH auténtico.
+     - Cowrie registra cada intento de usuario/contraseña.
+     - Si el atacante "entra", ve una shell falsa y Cowrie
+       registra todos los comandos que ejecuta.
+     - Los eventos se escriben en JSON en el volumen cowrie_logs.
+
+  4. El Collector (watchdog) detecta el cambio en el fichero JSON
+     (inotify), lee la nueva línea, la parsea con el parser de
+     cowrie, y llama a ip-api.com para obtener país/ciudad/coordenadas.
+
+  5. El evento enriquecido se inserta en la tabla `attacks` de PostgreSQL.
+
+  6. El Backend (FastAPI) expone el evento vía:
+     - GET /api/attacks  (próxima consulta del dashboard)
+     - WebSocket /ws/attacks  (en tiempo real, si hay clientes conectados)
+
+  7. El Frontend (React) muestra el ataque al instante en el dashboard:
+     - Aparece en la tabla de ataques.
+     - Se actualiza el contador de "ataques hoy".
+     - El mapa marca el país de origen.
+
+
+BASE DE DATOS — ESQUEMA
+------------------------
+Tabla `attacks` (todos los eventos de todos los honeypots):
+  id            SERIAL PK
+  timestamp     TIMESTAMPTZ     — cuándo ocurrió
+  honeypot      VARCHAR(50)     — "cowrie", "dionaea", "glastopf", etc.
+  source_ip     VARCHAR(45)     — IP del atacante (soporta IPv6)
+  source_port   INTEGER         — puerto origen
+  dest_port     INTEGER         — puerto destino (identifica el servicio atacado)
+  protocol      VARCHAR(20)     — "tcp", "udp", "ssh", etc.
+  country       VARCHAR(100)    — nombre del país (GeoIP)
+  country_code  CHAR(2)         — código ISO (CN, RU, US...)
+  city          VARCHAR(100)    — ciudad (GeoIP)
+  latitude      DOUBLE          — para el mapa
+  longitude     DOUBLE          — para el mapa
+  attack_type   VARCHAR(100)    — "brute_force", "exploit", "scan", etc.
+  username      VARCHAR(255)    — usuario probado (Cowrie, Honeytrap)
+  password      VARCHAR(255)    — contraseña probada
+  payload       TEXT            — datos enviados por el atacante
+  session_id    VARCHAR(255)    — ID de sesión (Cowrie)
+  raw_data      JSONB           — evento completo original del honeypot
+
+Índices: timestamp (DESC), honeypot, source_ip, attack_type, country_code.
+
+Tabla `education_articles` (contenido del dashboard educativo):
+  8 artículos precargados (seed.sql) sobre:
+  - Fuerza bruta SSH (principiante) — relacionado con Cowrie
+  - Ataques web SQLi/XSS (principiante) — relacionado con Glastopf
+  - Propagación de malware SMB/FTP (intermedio) — relacionado con Dionaea
+  - Ataques ICS/SCADA (avanzado) — relacionado con Conpot
+  - Ingeniería social y phishing (principiante)
+  - Guía de contraseñas seguras (principiante)
+  - Escaneo de puertos (intermedio) — relacionado con Honeytrap
+  - Qué es un honeypot (principiante)
+
+
+LOS 7 HONEYPOTS — RESUMEN RÁPIDO
+----------------------------------
+
+  COWRIE — SSH y Telnet
+    Puerto host: 2222 (SSH), 2323 (Telnet)
+    Imagen: cowrie/cowrie:latest (oficial, sin modificaciones)
+    Config: honeypots/cowrie/cowrie.cfg
+    Simula: servidor Ubuntu con SSH OpenSSH 8.9
+    Captura: credenciales probadas, comandos en shell, descargas
+    Log: volumen cowrie_logs → /home/cowrie/var/log/cowrie/cowrie.json
+
+  DIONAEA — SMB, FTP, MySQL, MQTT y más
+    Puertos host: 21, 42, 69/udp, 445, 1433, 1723, 1883, 3306
+    Imagen: dinotools/dionaea (imagen oficial del proyecto)
+    Config: usa defaults de la imagen (YAML interno)
+    Simula: Windows Server con servicios de red expuestos
+    Captura: exploits SMB (tipo EternalBlue), malware descargado, IoT
+    Log: volumen dionaea_logs → /opt/dionaea/var/log/dionaea/
+
+  CONPOT — ICS/SCADA
+    Puertos host: 102 (S7comm), 502 (Modbus), 44818 (EtherNet/IP)
+    Imagen: honeynet/conpot:latest (oficial Honeynet Project)
+    Config: plantillas internas de la imagen
+    Simula: dispositivo industrial Siemens / PLC genérico
+    Captura: escaneos de sistemas industriales, intentos de lectura Modbus
+    Log: volumen conpot_logs → /var/log/conpot/
+
+  GLASTOPF — Aplicación web
+    Puerto host: 8080 (→ puerto 80 interno)
+    Imagen: build propio — python:3.11-slim + Flask
+    Código: honeypots/glastopf/honeypot.py
+    Simula: servidor Apache con web vulnerable (responde con 404)
+    Captura: escaneos web (Nikto, sqlmap, WPScan), LFI, SQLi, bots
+    Log: volumen glastopf_logs → /opt/glastopf/log/glastopf.log
+    NOTA: reimplementación en Python 3 (original Python 2.7 abandonado)
+
+  HONEYTRAP — TCP/UDP genérico
+    Puertos host: ninguno (opera en red interna)
+    Imagen: honeytrap/honeytrap:latest
+    Config: honeypots/honeytrap/config.toml
+    Simula: SSH (8022), Telnet (23), FTP (21), HTTP (8888) internos
+    Captura: escaneos y conexiones a múltiples servicios
+    Log: volumen honeytrap_logs → /data/honeytrap.json
+    NOTA: imagen original honeynet/honeytrap no existía en Docker Hub
+
+  HONEYD — Red virtual
+    Puertos host: ninguno (opera en red interna)
+    Imagen: build propio — python:3.11-slim + asyncio
+    Código: honeypots/honeyd/honeypot.py
+    Simula: Telnet (23), SMTP (25), HTTP (80) internos
+    Captura: movimiento lateral interno, bots de Telnet/SMTP
+    Log: volumen honeyd_logs → /var/log/honeyd/honeyd.log
+    NOTA: reimplementación en Python 3 (original abandonado desde 2007)
+
+  (No hay un séptimo honeypot activo; los 6 de arriba son los operativos)
+
+
+FLUJO DE DATOS (COLLECTOR)
+---------------------------
+El Collector es el pegamento del sistema. Funciona así:
+
+  1. Se conecta a PostgreSQL (reintenta hasta 20 veces con 5s de espera).
+  2. Registra un FileSystemEventHandler (inotify) por cada fichero de log.
+  3. Cuando un honeypot escribe una nueva línea:
+     a. Lee solo las líneas nuevas (mantiene offset en memoria).
+     b. Llama al parser específico del honeypot (cowrie.py, dionaea.py...).
+     c. El parser devuelve un dataclass `Event` estandarizado.
+     d. Llama a ip-api.com con la IP del atacante (con caché en RAM).
+     e. Inserta el evento + GeoIP en la tabla `attacks`.
+  4. Si la conexión a BD cae, reconecta automáticamente.
+
+Ficheros de log monitorizados:
+  /logs/cowrie/cowrie.json
+  /logs/dionaea/dionaea.json
+  /logs/honeytrap/honeytrap.json
+  /logs/glastopf/glastopf.log
+  /logs/conpot/conpot.json
+  /logs/honeyd/honeyd.log
+
+
+RED DOCKER
+----------
+  Nombre: honeypot_net (bridge)
+  Todos los contenedores están en la misma red interna.
+  Se comunican por nombre de contenedor (ej: `db`, `backend`, `frontend`).
+  Solo Nginx (:80), los honeypots con puertos definidos, y Glastopf (:8080)
+  son accesibles desde el host o desde internet.
+  La BD y el backend son completamente internos (sin exposición al host).
+
+Diagrama de red:
+  HOST / INTERNET
+    :80    → honeypot_nginx  → frontend:3000
+                             → backend:8000/api/
+                             → backend:8000/ws/
+    :8080  → honeypot_glastopf
+    :2222  → honeypot_cowrie
+    :2323  → honeypot_cowrie
+    :21,:42,:69/udp,:445,:1433,:1723,:1883,:3306 → honeypot_dionaea
+    :102,:502,:44818 → honeypot_conpot
+
+  RED INTERNA (honeypot_net):
+    backend ←→ db
+    collector ←→ db
+    honeytrap (sin exposición al host)
+    honeyd (sin exposición al host)
+
+
+VARIABLES DE ENTORNO (.env)
+----------------------------
+  POSTGRES_DB=honeypot_db
+  POSTGRES_USER=honeypot_user
+  POSTGRES_PASSWORD=honeypot_pass
+  DATABASE_URL=postgresql+asyncpg://honeypot_user:honeypot_pass@db:5432/honeypot_db
+  DATABASE_SYNC_URL=postgresql://honeypot_user:honeypot_pass@db:5432/honeypot_db
+  SECRET_KEY=changeme-in-production
+
+IMPORTANTE: cambiar SECRET_KEY y las credenciales de BD antes de
+exponer la plataforma en un entorno de producción real.
+
+
+COMANDOS DE DIAGNÓSTICO RÁPIDO
+--------------------------------
+  # Ver todos los contenedores y su estado
+  docker compose ps
+
+  # Ver los últimos ataques capturados (en tiempo real)
+  docker compose logs -f collector
+
+  # Ver errores del backend
+  docker compose logs -f backend
+
+  # Ver qué está capturando cowrie
+  docker compose logs -f cowrie
+
+  # Conectar a la BD y ver ataques
+  docker exec -it honeypot_db psql -U honeypot_user -d honeypot_db \
+    -c "SELECT timestamp, honeypot, source_ip, attack_type FROM attacks ORDER BY timestamp DESC LIMIT 20;"
+
+  # Ver cuántos ataques hay en total
+  docker exec -it honeypot_db psql -U honeypot_user -d honeypot_db \
+    -c "SELECT count(*) FROM attacks;"
+
+  # Probar el API directamente
+  curl http://localhost/api/stats/summary | python3 -m json.tool
+
+  # Simular un ataque SSH (para verificar que Cowrie funciona)
+  ssh -p 2222 root@localhost
+  # (introducir cualquier contraseña — Cowrie la registrará)
+
+  # Probar el web honeypot
+  curl http://localhost:8080/wp-login.php
+  # (aparecerá en los logs de glastopf)
+
+
+PRÓXIMOS PASOS SUGERIDOS
+--------------------------
+El stack está funcionando. Lo que queda por hacer o mejorar:
+
+  1. Verificar que el Collector procesa correctamente los logs de
+     cada honeypot (los parsers pueden necesitar ajustes según el
+     formato real de los logs de cada imagen).
+
+  2. Implementar el frontend completo (React) — los componentes
+     están definidos pero pueden necesitar desarrollo adicional.
+
+  3. Exponer el puerto 22 real del host → 2222 de Cowrie con iptables:
+     sudo iptables -t nat -A PREROUTING -p tcp --dport 22 -j REDIRECT --to-port 2222
+     (solo si se quiere capturar ataques SSH reales en el puerto estándar)
+
+  4. Configurar SSL/TLS en Nginx para el dashboard.
+
+  5. Cambiar las credenciales por defecto del .env para producción.
+
+  6. Añadir autenticación al dashboard (actualmente es público).
+
+  7. Configurar alertas (email/Slack) cuando se detecten ataques
+     de alto valor (exploits SMB, intentos a sistemas ICS, etc.).
+
+====================================================================

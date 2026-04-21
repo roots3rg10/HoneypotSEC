@@ -1,0 +1,277 @@
+<mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+  <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- TÍTULO -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <mxCell id="title" value="Plataforma Honeypot — Arquitectura de contenedores" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1;fontColor=#1a1a2e;" vertex="1" parent="1">
+      <mxGeometry x="300" y="20" width="1050" height="40" as="geometry" />
+    </mxCell>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- INTERNET (zona exterior) -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <mxCell id="internet_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;opacity=30;arcSize=5;" vertex="1" parent="1">
+      <mxGeometry x="40" y="100" width="180" height="700" as="geometry" />
+    </mxCell>
+    <mxCell id="internet_label" value="🌐 INTERNET&#xa;(Atacantes)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;fontSize=13;fontStyle=1;fontColor=#b85450;" vertex="1" parent="1">
+      <mxGeometry x="40" y="108" width="180" height="40" as="geometry" />
+    </mxCell>
+
+    <!-- Figura atacante -->
+    <mxCell id="attacker" value="👤 Atacante" style="shape=mxgraph.cisco.people.generic_person;html=1;pointerEvents=1;dashed=0;fillColor=#b85450;strokeColor=#b85450;strokeWidth=1;align=center;fontSize=11;fontColor=#b85450;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="1">
+      <mxGeometry x="95" y="160" width="70" height="70" as="geometry" />
+    </mxCell>
+
+    <!-- Usuario legítimo -->
+    <mxCell id="user" value="👤 Usuario&#xa;(Dashboard)" style="shape=mxgraph.cisco.people.generic_person;html=1;pointerEvents=1;dashed=0;fillColor=#0e7dc2;strokeColor=#0e7dc2;strokeWidth=1;align=center;fontSize=11;fontColor=#0e7dc2;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="1">
+      <mxGeometry x="95" y="640" width="70" height="70" as="geometry" />
+    </mxCell>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- ZONA HONEYPOTS -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <mxCell id="hp_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;opacity=40;arcSize=5;" vertex="1" parent="1">
+      <mxGeometry x="270" y="80" width="380" height="600" as="geometry" />
+    </mxCell>
+    <mxCell id="hp_label" value="🍯 HONEYPOTS (trampas para atacantes)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;fontSize=13;fontStyle=1;fontColor=#7d5a00;" vertex="1" parent="1">
+      <mxGeometry x="270" y="88" width="380" height="30" as="geometry" />
+    </mxCell>
+
+    <!-- Cowrie -->
+    <mxCell id="cowrie" value="&lt;b&gt;🐚 cowrie&lt;/b&gt;&#xa;SSH puerto 2222&#xa;Telnet puerto 2323&#xa;Captura: intentos login, comandos" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=center;arcSize=10;" vertex="1" parent="1">
+      <mxGeometry x="290" y="130" width="240" height="70" as="geometry" />
+    </mxCell>
+
+    <!-- Dionaea -->
+    <mxCell id="dionaea" value="&lt;b&gt;🦎 dionaea&lt;/b&gt;&#xa;FTP·SMB·MySQL·MSSQL·MQTT·TFTP&#xa;Captura: exploits, malware, EternalBlue" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=center;arcSize=10;" vertex="1" parent="1">
+      <mxGeometry x="290" y="220" width="240" height="70" as="geometry" />
+    </mxCell>
+
+    <!-- Conpot -->
+    <mxCell id="conpot" value="&lt;b&gt;🏭 conpot&lt;/b&gt;&#xa;S7 puerto 102 · Modbus 502 · EtherNet/IP 44818&#xa;Captura: ataques a infraestructura industrial" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=center;arcSize=10;" vertex="1" parent="1">
+      <mxGeometry x="290" y="310" width="240" height="70" as="geometry" />
+    </mxCell>
+
+    <!-- Glastopf -->
+    <mxCell id="glastopf" value="&lt;b&gt;🌐 glastopf&lt;/b&gt;&#xa;HTTP puerto 8080&#xa;Captura: SQLi, RFI, XSS, bots web" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=center;arcSize=10;" vertex="1" parent="1">
+      <mxGeometry x="290" y="400" width="240" height="70" as="geometry" />
+    </mxCell>
+
+    <!-- Honeytrap -->
+    <mxCell id="honeytrap" value="&lt;b&gt;🪤 honeytrap&lt;/b&gt;&#xa;TCP/UDP genérico (interno)&#xa;Captura: cualquier conexión inesperada" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=center;arcSize=10;" vertex="1" parent="1">
+      <mxGeometry x="290" y="490" width="240" height="70" as="geometry" />
+    </mxCell>
+
+    <!-- Honeyd -->
+    <mxCell id="honeyd" value="&lt;b&gt;🕸️ honeyd&lt;/b&gt;&#xa;Telnet 23 · SMTP 25 · HTTP 80 (interno)&#xa;Captura: sondeos de red, spam, conexiones" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=center;arcSize=10;" vertex="1" parent="1">
+      <mxGeometry x="290" y="580" width="240" height="70" as="geometry" />
+    </mxCell>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- VOLÚMENES DE LOGS -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <mxCell id="vol_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;opacity=40;arcSize=5;" vertex="1" parent="1">
+      <mxGeometry x="700" y="80" width="180" height="600" as="geometry" />
+    </mxCell>
+    <mxCell id="vol_label" value="💾 LOGS&#xa;(Volúmenes Docker)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;fontSize=12;fontStyle=1;fontColor=#5a2d82;" vertex="1" parent="1">
+      <mxGeometry x="700" y="88" width="180" height="40" as="geometry" />
+    </mxCell>
+
+    <mxCell id="vol_cowrie" value="cowrie_logs&#xa;cowrie.json" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="735" y="145" width="110" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="vol_dionaea" value="dionaea_logs&#xa;dionaea.log" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="735" y="235" width="110" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="vol_conpot" value="conpot_logs&#xa;conpot.log" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="735" y="325" width="110" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="vol_glastopf" value="glastopf_logs&#xa;glastopf.log" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="735" y="415" width="110" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="vol_honeytrap" value="honeytrap_logs&#xa;honeytrap.json" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="735" y="505" width="110" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="vol_honeyd" value="honeyd_logs&#xa;honeyd.log" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="1">
+      <mxGeometry x="735" y="595" width="110" height="50" as="geometry" />
+    </mxCell>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- COLLECTOR -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <mxCell id="collector" value="&lt;b&gt;📦 collector&lt;/b&gt;&#xa;Lee logs con watchdog (inotify)&#xa;Parsea cada evento&#xa;Consulta GeoIP (ip-api.com)&#xa;Inserta en PostgreSQL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;arcSize=10;" vertex="1" parent="1">
+      <mxGeometry x="940" y="300" width="200" height="100" as="geometry" />
+    </mxCell>
+
+    <!-- GeoIP externo -->
+    <mxCell id="geoip" value="🌍 ip-api.com&#xa;(GeoIP gratuito)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;fontColor=#333333;" vertex="1" parent="1">
+      <mxGeometry x="960" y="160" width="160" height="60" as="geometry" />
+    </mxCell>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- BASE DE DATOS -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <mxCell id="db" value="&lt;b&gt;🗄️ db (PostgreSQL)&lt;/b&gt;&#xa;Tabla: attacks&#xa;Tabla: education_articles&#xa;Solo accesible internamente" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;arcSize=10;" vertex="1" parent="1">
+      <mxGeometry x="950" y="480" width="180" height="100" as="geometry" />
+    </mxCell>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- ZONA FRONTEND / NGINX -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <mxCell id="web_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;opacity=30;arcSize=5;" vertex="1" parent="1">
+      <mxGeometry x="1210" y="200" width="390" height="480" as="geometry" />
+    </mxCell>
+    <mxCell id="web_label" value="🖥️ CAPA WEB" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;fontSize=13;fontStyle=1;fontColor=#0050a0;" vertex="1" parent="1">
+      <mxGeometry x="1210" y="208" width="390" height="30" as="geometry" />
+    </mxCell>
+
+    <!-- Nginx -->
+    <mxCell id="nginx" value="&lt;b&gt;🔀 nginx&lt;/b&gt;&#xa;Reverse proxy — Puerto 80&#xa;/ → frontend&#xa;/api/ → backend&#xa;/ws/ → WebSocket" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;arcSize=10;" vertex="1" parent="1">
+      <mxGeometry x="1230" y="280" width="200" height="100" as="geometry" />
+    </mxCell>
+
+    <!-- Backend -->
+    <mxCell id="backend" value="&lt;b&gt;⚙️ backend (FastAPI)&lt;/b&gt;&#xa;GET /api/attacks&#xa;GET /api/stats/*&#xa;GET /api/education&#xa;WS  /ws/attacks" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;arcSize=10;" vertex="1" parent="1">
+      <mxGeometry x="1230" y="430" width="200" height="100" as="geometry" />
+    </mxCell>
+
+    <!-- Frontend -->
+    <mxCell id="frontend" value="&lt;b&gt;🎨 frontend (React)&lt;/b&gt;&#xa;Dashboard con mapa&#xa;Gráficas de ataques&#xa;Sección educativa&#xa;WebSocket tiempo real" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;arcSize=10;" vertex="1" parent="1">
+      <mxGeometry x="1470" y="350" width="110" height="100" as="geometry" />
+    </mxCell>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- FLECHAS — ATACANTES → HONEYPOTS -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <mxCell id="e_att_cow" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#b85450;strokeWidth=2;" edge="1" source="attacker" target="cowrie" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e_att_dio" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#b85450;strokeWidth=2;" edge="1" source="attacker" target="dionaea" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e_att_con" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#b85450;strokeWidth=2;" edge="1" source="attacker" target="conpot" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e_att_gla" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#b85450;strokeWidth=2;" edge="1" source="attacker" target="glastopf" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e_att_htr" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#b85450;strokeWidth=2;" edge="1" source="attacker" target="honeytrap" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e_att_hyd" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#b85450;strokeWidth=2;" edge="1" source="attacker" target="honeyd" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- FLECHAS — HONEYPOTS → VOLÚMENES -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <mxCell id="e_cow_vol" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#9673a6;strokeWidth=1.5;dashed=1;" edge="1" source="cowrie" target="vol_cowrie" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e_dio_vol" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#9673a6;strokeWidth=1.5;dashed=1;" edge="1" source="dionaea" target="vol_dionaea" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e_con_vol" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#9673a6;strokeWidth=1.5;dashed=1;" edge="1" source="conpot" target="vol_conpot" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e_gla_vol" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#9673a6;strokeWidth=1.5;dashed=1;" edge="1" source="glastopf" target="vol_glastopf" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e_htr_vol" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#9673a6;strokeWidth=1.5;dashed=1;" edge="1" source="honeytrap" target="vol_honeytrap" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e_hyd_vol" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#9673a6;strokeWidth=1.5;dashed=1;" edge="1" source="honeyd" target="vol_honeyd" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- FLECHAS — VOLÚMENES → COLLECTOR -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <mxCell id="e_vol_col1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.2;entryDx=0;entryDy=0;strokeColor=#6c8ebf;strokeWidth=1.5;" edge="1" source="vol_cowrie" target="collector" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e_vol_col2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.35;entryDx=0;entryDy=0;strokeColor=#6c8ebf;strokeWidth=1.5;" edge="1" source="vol_dionaea" target="collector" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e_vol_col3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#6c8ebf;strokeWidth=1.5;" edge="1" source="vol_conpot" target="collector" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e_vol_col4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.65;entryDx=0;entryDy=0;strokeColor=#6c8ebf;strokeWidth=1.5;" edge="1" source="vol_glastopf" target="collector" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e_vol_col5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.8;entryDx=0;entryDy=0;strokeColor=#6c8ebf;strokeWidth=1.5;" edge="1" source="vol_honeytrap" target="collector" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e_vol_col6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.95;entryDx=0;entryDy=0;strokeColor=#6c8ebf;strokeWidth=1.5;" edge="1" source="vol_honeyd" target="collector" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- FLECHAS — COLLECTOR ↔ GEOIP + DB -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <mxCell id="e_col_geo" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;strokeColor=#666666;strokeWidth=1.5;dashed=1;" edge="1" source="collector" target="geoip" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e_col_db" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#82b366;strokeWidth=2;" edge="1" source="collector" target="db" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- FLECHAS — DB → BACKEND → NGINX → FRONTEND -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <mxCell id="e_db_back" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#82b366;strokeWidth=2;" edge="1" source="db" target="backend" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e_back_ngi" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0;exitDx=0;exitDy=0;entryX=0;entryY=0.7;entryDx=0;entryDy=0;strokeColor=#6c8ebf;strokeWidth=2;" edge="1" source="backend" target="nginx" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e_ngi_fro" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#6c8ebf;strokeWidth=2;" edge="1" source="nginx" target="frontend" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- FLECHAS — USUARIO → NGINX -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <mxCell id="e_usr_ngi" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;strokeColor=#0e7dc2;strokeWidth=2;" edge="1" source="user" target="nginx" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- LEYENDA -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <mxCell id="legend_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;opacity=70;arcSize=5;" vertex="1" parent="1">
+      <mxGeometry x="40" y="820" width="560" height="100" as="geometry" />
+    </mxCell>
+    <mxCell id="legend_title" value="Leyenda de flechas" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="60" y="828" width="200" height="20" as="geometry" />
+    </mxCell>
+    <mxCell id="leg1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#b85450;strokeWidth=2;entryX=0;entryY=0.5;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="60" y="860"/><mxPoint x="130" y="860"/></Array></mxGeometry>
+    </mxCell>
+    <mxCell id="leg1_txt" value="Ataque entrante" style="text;html=1;strokeColor=none;fillColor=none;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="135" y="852" width="130" height="20" as="geometry" />
+    </mxCell>
+    <mxCell id="leg2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#9673a6;strokeWidth=1.5;dashed=1;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="60" y="885"/><mxPoint x="130" y="885"/></Array></mxGeometry>
+    </mxCell>
+    <mxCell id="leg2_txt" value="Escritura de log" style="text;html=1;strokeColor=none;fillColor=none;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="135" y="877" width="130" height="20" as="geometry" />
+    </mxCell>
+    <mxCell id="leg3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#6c8ebf;strokeWidth=1.5;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="290" y="860"/><mxPoint x="360" y="860"/></Array></mxGeometry>
+    </mxCell>
+    <mxCell id="leg3_txt" value="Lectura / API HTTP" style="text;html=1;strokeColor=none;fillColor=none;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="365" y="852" width="130" height="20" as="geometry" />
+    </mxCell>
+    <mxCell id="leg4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#82b366;strokeWidth=2;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="290" y="885"/><mxPoint x="360" y="885"/></Array></mxGeometry>
+    </mxCell>
+    <mxCell id="leg4_txt" value="Acceso a base de datos" style="text;html=1;strokeColor=none;fillColor=none;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="365" y="877" width="160" height="20" as="geometry" />
+    </mxCell>
+
+  </root>
+</mxGraphModel>

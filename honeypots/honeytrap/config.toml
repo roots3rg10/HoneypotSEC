@@ -1,0 +1,43 @@
+[listener]
+type = "socket"
+
+[service.ssh-sim]
+type = "ssh-simulator"
+credentials = ["root:root", "root:password", "admin:admin"]
+
+[service.telnet01]
+type = "telnet"
+server-name = "Ubuntu-Server"
+
+[service.ftp01]
+type = "ftp"
+
+[service.http01]
+type = "http"
+
+[[port]]
+ports = ["tcp/8022", "tcp/22"]
+services = ["ssh-sim"]
+
+[[port]]
+port = "tcp/23"
+services = ["telnet01"]
+
+[[port]]
+port = "tcp/21"
+services = ["ftp01"]
+
+[[port]]
+port = "tcp/8888"
+services = ["http01"]
+
+[channel.file01]
+type = "file"
+filename = "/data/honeytrap.json"
+
+[[filter]]
+channel = ["file01"]
+
+[[logging]]
+output = "/data/honeytrap.log"
+level = "info"

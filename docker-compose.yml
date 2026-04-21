@@ -1,0 +1,175 @@
+services:
+  # ─── Base de datos ────────────────────────────────────────────────
+  db:
+    image: postgres:15-alpine
+    container_name: honeypot_db
+    environment:
+      POSTGRES_DB: honeypot_db
+      POSTGRES_USER: honeypot_user
+      POSTGRES_PASSWORD: honeypot_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01_init.sql
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02_seed.sql
+    networks:
+      - honeypot_net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U honeypot_user -d honeypot_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Backend API ──────────────────────────────────────────────────
+  backend:
+    build: ./backend
+    container_name: honeypot_backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://honeypot_user:honeypot_pass@db:5432/honeypot_db
+      DATABASE_SYNC_URL: postgresql://honeypot_user:honeypot_pass@db:5432/honeypot_db
+      SECRET_KEY: changeme-in-production
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - honeypot_net
+    restart: unless-stopped
+
+  # ─── Colector de logs ─────────────────────────────────────────────
+  collector:
+    build: ./collector
+    container_name: honeypot_collector
+    environment:
+      DATABASE_URL: postgresql://honeypot_user:honeypot_pass@db:5432/honeypot_db
+    volumes:
+      - cowrie_logs:/logs/cowrie:ro
+      - dionaea_logs:/logs/dionaea:ro
+      - honeytrap_logs:/logs/honeytrap:ro
+      - glastopf_logs:/logs/glastopf:ro
+      - conpot_logs:/logs/conpot:ro
+      - honeyd_logs:/logs/honeyd:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - honeypot_net
+    restart: unless-stopped
+
+  # ─── Cowrie (SSH / Telnet) ────────────────────────────────────────
+  cowrie:
+    image: cowrie/cowrie:latest
+    container_name: honeypot_cowrie
+    volumes:
+      - cowrie_logs:/home/cowrie/var/log/cowrie
+      - ./honeypots/cowrie/cowrie.cfg:/home/cowrie/etc/cowrie.cfg:ro
+    ports:
+      - "2222:2222"
+      - "2323:2323"
+    networks:
+      - honeypot_net
+    restart: unless-stopped
+
+  # ─── Dionaea (SMB / FTP / HTTP / malware) ────────────────────────
+  dionaea:
+    image: dinotools/dionaea
+    container_name: honeypot_dionaea
+    volumes:
+      - dionaea_logs:/opt/dionaea/var/log/dionaea
+    ports:
+      - "21:21"
+      - "42:42"
+      - "69:69/udp"
+      - "445:445"
+      - "1433:1433"
+      - "1723:1723"
+      - "1883:1883"
+      - "3306:3306"
+    networks:
+      - honeypot_net
+    restart: unless-stopped
+
+  # ─── Honeytrap (TCP/UDP genérico) ────────────────────────────────
+  honeytrap:
+    image: honeytrap/honeytrap:latest
+    container_name: honeypot_honeytrap
+    volumes:
+      - honeytrap_logs:/data
+      - ./honeypots/honeytrap/config.toml:/config/config.toml:ro
+    networks:
+      - honeypot_net
+    restart: unless-stopped
+
+  # ─── Glastopf (Web application honeypot) ────────────────────────
+  glastopf:
+    build: ./honeypots/glastopf
+    container_name: honeypot_glastopf
+    volumes:
+      - glastopf_logs:/opt/glastopf/log
+    ports:
+      - "8080:80"
+    networks:
+      - honeypot_net
+    restart: unless-stopped
+
+  # ─── Conpot (ICS / SCADA) ────────────────────────────────────────
+  conpot:
+    image: honeynet/conpot:latest
+    container_name: honeypot_conpot
+    volumes:
+      - conpot_logs:/var/log/conpot
+    ports:
+      - "102:102"
+      - "502:502"
+      - "44818:44818"
+    networks:
+      - honeypot_net
+    restart: unless-stopped
+
+  # ─── Honeyd (red virtual) ────────────────────────────────────────
+  honeyd:
+    build: ./honeypots/honeyd
+    container_name: honeypot_honeyd
+    volumes:
+      - honeyd_logs:/var/log/honeyd
+      - ./honeypots/honeyd/honeyd.conf:/etc/honeyd.conf:ro
+    cap_add:
+      - NET_ADMIN
+    networks:
+      - honeypot_net
+    restart: unless-stopped
+
+  # ─── Frontend React ───────────────────────────────────────────────
+  frontend:
+    build: ./frontend
+    container_name: honeypot_frontend
+    networks:
+      - honeypot_net
+    restart: unless-stopped
+
+  # ─── Nginx (reverse proxy) ───────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: honeypot_nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - honeypot_net
+    restart: unless-stopped
+
+networks:
+  honeypot_net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  cowrie_logs:
+  dionaea_logs:
+  honeytrap_logs:
+  glastopf_logs:
+  conpot_logs:
+  honeyd_logs:

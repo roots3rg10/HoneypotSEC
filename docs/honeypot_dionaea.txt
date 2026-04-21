@@ -1,0 +1,141 @@
+====================================================================
+HONEYPOT: DIONAEA (SMB / FTP / HTTP / Malware)
+====================================================================
+
+DESCRIPCIÓN GENERAL
+-------------------
+Dionaea es un honeypot de baja interacción diseñado para capturar
+malware explotando vulnerabilidades en protocolos de red. Simula
+servicios como SMB (Windows), FTP, HTTP, MySQL, MSSQL, MQTT, SIP
+y otros. Su función principal es atraer exploits y descargar las
+muestras de malware que los atacantes intentan inyectar.
+
+Proyecto original: https://github.com/DinoTools/dionaea
+Mantenido por DinoTools como fork del proyecto original de Honeynet.
+
+
+INSTALACIÓN
+-----------
+PROBLEMA ENCONTRADO:
+El Dockerfile original intentaba instalar dionaea desde los
+repositorios de paquetes de Ubuntu 22.04:
+
+  FROM ubuntu:22.04
+  RUN apt-get install -y dionaea   ← FALLA: paquete no disponible
+
+El paquete `dionaea` fue eliminado de los repositorios estándar de
+Ubuntu/Debian hace tiempo porque requería librerías antiguas y compilar
+desde fuente es complejo (lcfg, libemu, etc.).
+
+SOLUCIÓN APLICADA:
+Se cambió de un build propio a la imagen oficial de DinoTools:
+
+  Imagen: dinotools/dionaea  (Docker Hub)
+
+Esta imagen está mantenida por los autores del fork y contiene
+dionaea 0.11+ precompilado con todas sus dependencias.
+
+El contenedor se llama `honeypot_dionaea`.
+No se necesita Dockerfile propio: se elimina la directiva `build`
+y se sustituye por `image: dinotools/dionaea`.
+
+
+CONFIGURACIÓN
+-------------
+La imagen dinotools/dionaea usa un sistema de inicialización propio.
+El entrypoint (/usr/local/sbin/entrypoint.sh) copia plantillas
+de configuración desde /opt/dionaea/template/ al directorio activo
+/opt/dionaea/etc/dionaea/ si no existen:
+
+  Configuración activa: /opt/dionaea/etc/dionaea/dionaea.cfg
+  Servicios habilitados: /opt/dionaea/etc/dionaea/services-enabled/
+  Handlers habilitados:  /opt/dionaea/etc/dionaea/ihandlers-enabled/
+
+Variables de entorno del entrypoint:
+  DIONAEA_FORCE_INIT=1      → fuerza la copia de plantillas
+  DIONAEA_SKIP_INIT=1       → salta la copia (si ya existe config)
+  DIONAEA_FORCE_INIT_CONF=1 → fuerza solo la parte de configuración
+
+En esta implementación se usan los valores por defecto de la imagen
+(sin montar un dionaea.cfg personalizado), ya que el fichero
+dionaea.cfg del repositorio usa el formato antiguo (ini-style con
+`module = nl.dijkewijk.dionaea`) incompatible con la versión actual
+de dinotools/dionaea que usa formato YAML para servicios.
+
+Servicios activos por defecto en dinotools/dionaea:
+  - FTP (puerto 21)
+  - HTTP (puerto 80)
+  - SMB/EPMAP (puertos 42, 445)
+  - MySQL (puerto 3306)
+  - MSSQL (puerto 1433)
+  - PPTP (puerto 1723)
+  - MQTT (puerto 1883)
+  - TFTP (puerto 69/udp)
+  - Blackhole, Mirror, Upnp, Mongo, Memcache, SIP, etc.
+
+
+PUERTOS EXPUESTOS AL HOST
+--------------------------
+  21/tcp    → FTP
+  42/tcp    → WINS/SMB nameservice
+  69/udp    → TFTP
+  445/tcp   → SMB (Windows file sharing)
+  1433/tcp  → Microsoft SQL Server
+  1723/tcp  → PPTP VPN
+  1883/tcp  → MQTT (IoT)
+  3306/tcp  → MySQL
+
+
+VOLÚMENES
+---------
+  dionaea_logs → /opt/dionaea/var/log/dionaea
+    Volumen Docker nombrado. El Collector lo monta en lectura
+    para procesar dionaea.json.
+
+
+DOCKER COMPOSE (extracto)
+--------------------------
+  dionaea:
+    image: dinotools/dionaea
+    container_name: honeypot_dionaea
+    volumes:
+      - dionaea_logs:/opt/dionaea/var/log/dionaea
+    ports:
+      - "21:21"
+      - "42:42"
+      - "69:69/udp"
+      - "445:445"
+      - "1433:1433"
+      - "1723:1723"
+      - "1883:1883"
+      - "3306:3306"
+    networks:
+      - honeypot_net
+    restart: unless-stopped
+
+
+QUÉ CAPTURA
+-----------
+- Intentos de exploit SMB (EternalBlue, MS17-010 y similares).
+- Descargas de malware y binarios maliciosos (los guarda en disco).
+- Conexiones y comandos a MySQL y MSSQL falsos.
+- Tráfico MQTT malicioso (botnets IoT).
+- Peticiones HTTP maliciosas.
+- Intentos de conexión PPTP.
+- Actividad TFTP (descarga de payloads en routers comprometidos).
+
+Los eventos se escriben en dionaea.json (formato JSON) en el volumen
+dionaea_logs, que el Collector procesa.
+
+
+PROBLEMAS ENCONTRADOS Y SOLUCIONES
+------------------------------------
+1. Paquete `dionaea` no disponible en Ubuntu 22.04 apt.
+   Solución: usar imagen oficial dinotools/dionaea de Docker Hub.
+
+2. El dionaea.cfg del repositorio usaba el formato ini antiguo
+   incompatible con la versión actual.
+   Solución: no montar un config personalizado; usar los defaults
+   de la imagen que incluyen configuración YAML funcional.
+
+====================================================================

@@ -1,0 +1,167 @@
+====================================================================
+HONEYPOT: GLASTOPF (Web Application Honeypot)
+====================================================================
+
+DESCRIPCIÓN GENERAL
+-------------------
+Glastopf fue un honeypot de aplicación web diseñado para simular
+vulnerabilidades web comunes (LFI, RFI, SQLi, XSS, etc.) y atraer
+a herramientas de escaneo automático y atacantes que buscan aplicaciones
+web vulnerables. Fue uno de los primeros honeypots web de la comunidad.
+
+Proyecto original: https://github.com/mushorg/glastopf
+Estado: ABANDONADO (último commit ~2015, escrito en Python 2.7).
+
+Dado que el proyecto está muerto y la infraestructura de Python 2.7
+ya no existe como imagen Docker, se realizó una reimplementación
+funcional usando Python 3.
+
+
+INSTALACIÓN
+-----------
+PROBLEMA ENCONTRADO:
+El Dockerfile original era:
+
+  FROM python:2.7-slim
+  RUN pip install glastopf
+  CMD ["glastopf-runner"]
+
+Múltiples problemas:
+1. La imagen `python:2.7-slim` fue eliminada de Docker Hub en 2022.
+   Python 2.7 llegó a su fin de vida en enero de 2020.
+2. El paquete `glastopf` en PyPI no se puede instalar con pip moderno
+   (dependencias rotas, librerías incompatibles con Python 3).
+3. El propio proyecto no ha tenido mantenimiento desde ~2015.
+
+SOLUCIÓN APLICADA:
+Se reescribió completamente el honeypot usando Python 3.11 y Flask.
+La nueva implementación mantiene la función esencial de Glastopf:
+capturar y registrar todas las peticiones HTTP entrantes.
+
+Ficheros creados:
+  honeypots/glastopf/Dockerfile
+  honeypots/glastopf/honeypot.py
+
+
+DOCKERFILE
+----------
+  FROM python:3.11-slim
+
+  RUN pip install --no-cache-dir flask
+
+  RUN mkdir -p /opt/glastopf/log
+
+  WORKDIR /opt/glastopf
+
+  COPY honeypot.py .
+
+  EXPOSE 80
+
+  CMD ["python", "honeypot.py"]
+
+Base: python:3.11-slim (imagen mínima oficial de Python 3.11).
+Única dependencia: Flask (servidor HTTP ligero).
+El proceso corre como root para poder bind en el puerto 80.
+
+
+IMPLEMENTACIÓN (honeypot.py)
+-----------------------------
+El honeypot captura TODAS las peticiones HTTP a CUALQUIER ruta,
+método y endpoint. Para cada petición registra en JSON:
+
+  - timestamp     → fecha/hora UTC en ISO 8601
+  - honeypot      → "glastopf" (identificador para el Collector)
+  - source_ip     → IP del atacante
+  - method        → GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD
+  - path          → ruta solicitada (ej: /admin, /wp-login.php)
+  - query         → query string (ej: ?id=1 OR 1=1)
+  - user_agent    → agente del atacante (revela herramientas: sqlmap, etc.)
+  - content_type  → tipo de contenido del body
+  - payload       → cuerpo de la petición (hasta 4096 bytes)
+
+Respuesta devuelta al atacante:
+  HTTP 404 con body HTML fake y cabecera:
+    Server: Apache/2.4.41 (Ubuntu)
+  (imita un servidor Apache real para mayor credibilidad)
+
+Rutas capturadas: todas ("/<path:path>" + "/" como fallback)
+Métodos capturados: GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD
+
+Código clave:
+  @app.route("/", defaults={"path": ""}, methods=[...])
+  @app.route("/<path:path>",             methods=[...])
+  def catch_all(path):
+      event = { "timestamp": ..., "source_ip": ..., ... }
+      logging.info(json.dumps(event))
+      return ("<html>404</html>", 404, {"Server": "Apache/2.4.41"})
+
+
+CONFIGURACIÓN
+-------------
+LOG_FILE = "/opt/glastopf/log/glastopf.log"
+
+Los logs se escriben en formato NDJSON (una línea = un evento JSON)
+en el volumen glastopf_logs, que el Collector procesa.
+
+
+PUERTOS EXPUESTOS AL HOST
+--------------------------
+  8080/tcp (host) → 80/tcp (contenedor)
+
+El puerto 80 del host ya lo usa Nginx (reverse proxy del dashboard).
+Por ello Glastopf se expone en el puerto 8080 del host.
+Dentro de la red Docker interna, el contenedor escucha en el :80.
+
+
+VOLÚMENES
+---------
+  glastopf_logs → /opt/glastopf/log
+    Volumen Docker nombrado. El Collector lee glastopf.log
+    (que en esta implementación es el fichero de log JSON).
+
+  Nota: el Collector busca glastopf.json pero el fichero se llama
+  glastopf.log. Esto requiere que el parser del Collector lea
+  /logs/glastopf/glastopf.log (ajustado en collector/main.py).
+
+
+DOCKER COMPOSE (extracto)
+--------------------------
+  glastopf:
+    build: ./honeypots/glastopf
+    container_name: honeypot_glastopf
+    volumes:
+      - glastopf_logs:/opt/glastopf/log
+    ports:
+      - "8080:80"
+    networks:
+      - honeypot_net
+    restart: unless-stopped
+
+
+QUÉ CAPTURA
+-----------
+- Escaneos automáticos de vulnerabilidades (Nikto, SQLmap, WPScan).
+- Intentos de acceso a rutas comunes: /admin, /wp-login.php,
+  /.env, /phpinfo.php, /shell.php, /etc/passwd (LFI), etc.
+- Intentos de SQL injection en query strings.
+- Exploits de Remote File Inclusion (parámetros con URLs externas).
+- Bots que buscan paneles de administración expuestos.
+- User-agents de herramientas de hacking (sqlmap/1.x, Nikto/2.x, etc.).
+- Peticiones de escaneo de Shodan, Censys y similares.
+
+
+PROBLEMAS ENCONTRADOS Y SOLUCIONES
+------------------------------------
+1. Imagen python:2.7-slim eliminada de Docker Hub.
+   Glastopf abandonado e incompatible con Python 3.
+   Solución: reimplementación completa en Python 3 + Flask.
+
+2. El proyecto original de Glastopf tenía dependencias de emulación
+   PHP y análisis de vulnerabilidades que serían complejas de portar.
+   Solución: la reimplementación se centra en la función principal
+   (capturar y registrar peticiones HTTP) sin la emulación de
+   vulnerabilidades avanzada, que en la práctica tenía poco valor
+   ya que los atacantes modernos no necesitan respuestas realistas
+   para ser detectados.
+
+====================================================================

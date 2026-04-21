@@ -1,0 +1,196 @@
+====================================================================
+HONEYPOT: HONEYD (Red Virtual)
+====================================================================
+
+DESCRIPCIÓN GENERAL
+-------------------
+Honeyd fue un demonio de honeypot de baja interacción capaz de
+simular múltiples hosts virtuales en una red, cada uno con un
+sistema operativo diferente (fingerprint de OS). Permitía crear
+redes falsas completas donde cada IP parecía un equipo distinto
+con sus puertos y comportamiento de red característicos.
+
+Proyecto original: http://www.citi.umich.edu/u/provos/honeyd/
+Creado por Niels Provos. Estado: ABANDONADO (último release: 2007).
+
+Dado que honeyd lleva ~17 años sin mantenimiento y fue eliminado
+de todos los repositorios modernos de Linux, se realizó una
+reimplementación funcional en Python 3.
+
+
+INSTALACIÓN
+-----------
+PROBLEMA ENCONTRADO:
+El Dockerfile original era:
+
+  FROM debian:bullseye-slim
+  RUN apt-get install -y honeyd   ← FALLA: paquete no disponible
+
+El paquete `honeyd` fue eliminado de Debian y Ubuntu porque:
+1. Sus dependencias (libdnet, libevent versión antigua) son incompatibles
+   con las versiones modernas de estas librerías.
+2. El código fuente es C de 2007 con problemas de compilación modernos.
+3. Fue oficialmente retirado de Debian en la versión ~Stretch/Buster.
+
+SOLUCIÓN APLICADA:
+Se reescribió el honeypot usando Python 3.11 con asyncio.
+La implementación conserva la función esencial de honeyd:
+simular múltiples servicios de red con banners realistas y
+registrar todas las conexiones.
+
+Ficheros creados:
+  honeypots/honeyd/Dockerfile
+  honeypots/honeyd/honeypot.py
+  (conservado: honeypots/honeyd/honeyd.conf, como referencia de
+   la configuración original para documentación)
+
+
+DOCKERFILE
+----------
+  FROM python:3.11-slim
+
+  RUN mkdir -p /var/log/honeyd
+
+  WORKDIR /opt/honeyd
+
+  COPY honeypot.py .
+  COPY honeyd.conf /etc/honeyd.conf   ← copiado como referencia
+
+  EXPOSE 23 25 80
+
+  CMD ["python", "honeypot.py"]
+
+Base: python:3.11-slim.
+Sin dependencias externas (usa solo la stdlib de Python).
+El CMD ejecuta el honeypot asyncio directamente.
+
+
+CONFIGURACIÓN ORIGINAL (honeyd.conf)
+--------------------------------------
+El honeyd.conf original define plantillas de hosts virtuales:
+
+  create default
+  set default personality "Linux 2.6"
+  set default default tcp action reset
+
+  create windows_host
+  set windows_host personality "Windows XP SP2"
+  add windows_host tcp port 80 open
+  add windows_host tcp port 135 open
+  add windows_host tcp port 445 open
+  add windows_host tcp port 3389 open
+
+  create linux_host
+  set linux_host personality "Linux 2.6.18"
+  add linux_host tcp port 22 open
+  add linux_host tcp port 80 open
+  add linux_host tcp port 443 open
+
+  create router
+  set router personality "Cisco IOS 12.4"
+  add router tcp port 23 open
+  add router tcp port 80 open
+
+  bind 10.0.0.10 windows_host
+  bind 10.0.0.11 linux_host
+  bind 10.0.0.1  router
+
+Este fichero se conserva como referencia histórica/documentación
+pero no es procesado por la nueva implementación Python.
+
+
+IMPLEMENTACIÓN (honeypot.py)
+-----------------------------
+Usa asyncio.Protocol para crear servidores TCP no bloqueantes.
+Cada conexión entrante recibe un banner específico del protocolo
+y todos los datos recibidos se registran en JSON.
+
+Servicios simulados:
+
+  Puerto 23  (Telnet) → banner: "Ubuntu 20.04 LTS login: "
+  Puerto 25  (SMTP)   → banner: "220 mail.example.com ESMTP\r\n"
+  Puerto 80  (HTTP)   → banner: "HTTP/1.1 200 OK\r\nServer: Apache/2.4.41..."
+
+Para cada conexión se registra:
+  - timestamp    → fecha/hora UTC
+  - honeypot     → "honeyd"
+  - source_ip    → IP del atacante
+  - source_port  → puerto origen
+  - dest_port    → puerto destino (identifica el servicio)
+  - protocol     → "tcp"
+  - payload      → datos enviados por el atacante (hasta 2048 bytes)
+
+Arquitectura asyncio:
+  HoneydProtocol (asyncio.Protocol):
+    connection_made() → envía banner al conectar
+    data_received()   → registra datos y cierra conexión
+    connection_lost() → limpieza
+
+  main() → loop.create_server() para cada puerto/servicio
+         → asyncio.gather() para mantener todos los servidores activos
+
+
+PUERTOS EXPUESTOS
+-----------------
+Honeyd no expone puertos al host. Opera exclusivamente en la red
+interna Docker (honeypot_net). Los puertos 23, 25 y 80 son internos.
+
+Esto es intencional: honeyd actúa como un sensor interno de la red
+del proyecto que detecta escaneos horizontales de otros contenedores
+o del propio colector realizando tests.
+
+
+VOLÚMENES
+---------
+  honeyd_logs → /var/log/honeyd
+    LOG_FILE = /var/log/honeyd/honeyd.log
+    El Collector lee este fichero para extraer eventos.
+
+
+CAPACIDADES DOCKER
+------------------
+El servicio tiene cap_add: NET_ADMIN en docker-compose.yml,
+heredado de la configuración original del honeyd real (que necesitaba
+capturar paquetes a nivel de red con raw sockets para su modo
+"virtual network"). La implementación Python no lo requiere pero
+se mantiene por si se implementa captura de paquetes en el futuro.
+
+
+DOCKER COMPOSE (extracto)
+--------------------------
+  honeyd:
+    build: ./honeypots/honeyd
+    container_name: honeypot_honeyd
+    volumes:
+      - honeyd_logs:/var/log/honeyd
+      - ./honeypots/honeyd/honeyd.conf:/etc/honeyd.conf:ro
+    cap_add:
+      - NET_ADMIN
+    networks:
+      - honeypot_net
+    restart: unless-stopped
+
+
+QUÉ CAPTURA
+-----------
+- Conexiones a puertos Telnet (23): bots de Mirai y similares.
+- Conexiones a puerto SMTP (25): spam bots, relays abiertos.
+- Conexiones a puerto HTTP (80): escaneos web internos.
+- Payload de cada conexión: comandos, intentos de login, etc.
+
+Al no exponer puertos al host, este honeypot es especialmente útil
+para detectar movimiento lateral y escaneos de red internos.
+
+
+PROBLEMAS ENCONTRADOS Y SOLUCIONES
+------------------------------------
+1. Paquete `honeyd` no existe en Debian bullseye (ni en ninguna
+   distribución moderna).
+   Solución: reimplementación completa en Python 3 con asyncio.
+
+2. El honeyd original requería permisos especiales (raw sockets,
+   interfaces de red virtuales) para crear la "red virtual".
+   La reimplementación simplifica esto usando TCP servers normales
+   que consiguen el mismo objetivo de captura de eventos.
+
+====================================================================

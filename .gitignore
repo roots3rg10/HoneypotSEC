@@ -1,0 +1,41 @@
+# Entorno y secretos
+.env
+*.env.local
+*.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Node / Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Docker volumes (datos en runtime, no en repo)
+postgres_data/
+
+# Logs locales
+*.log
+logs/
+
+# Editores
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+
+# Configuración local de Claude Code (permisos de sesión)
+.claude/
+
+# Archivos de contexto internos de sesión
+conversacion.txt
+echo.txt
