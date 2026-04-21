@@ -1,25 +1,56 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  * { box-sizing: border-box; }
   body {
-    @apply bg-dark-900 text-gray-100 font-sans;
+    @apply bg-gray-950 text-gray-100 font-sans antialiased;
+    background-image:
+      radial-gradient(ellipse at 20% 0%, rgba(6,182,212,0.04) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 100%, rgba(59,130,246,0.04) 0%, transparent 60%);
+    background-attachment: fixed;
   }
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { @apply bg-dark-800; }
-  ::-webkit-scrollbar-thumb { @apply bg-dark-600 rounded; }
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { @apply bg-gray-950; }
+  ::-webkit-scrollbar-thumb { @apply bg-gray-700 rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-gray-600; }
 }
 
 @layer components {
   .card {
-    @apply bg-dark-800 border border-dark-600 rounded-xl p-5;
+    @apply bg-gray-850 border border-gray-700/60 rounded-2xl p-5 shadow-card;
+  }
+  .card-hover {
+    @apply card transition-all duration-200 hover:border-gray-600 hover:shadow-glow-sm;
   }
   .badge {
-    @apply inline-block px-2 py-0.5 rounded text-xs font-semibold;
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold;
   }
   .btn-primary {
-    @apply bg-accent-500 text-dark-900 font-semibold px-4 py-2 rounded-lg
-           hover:bg-accent-400 transition-colors;
+    @apply bg-cyan-500 text-gray-950 font-semibold px-4 py-2 rounded-lg
+           hover:bg-cyan-400 transition-colors duration-150;
+  }
+  .stat-card {
+    @apply card relative overflow-hidden;
+  }
+  .nav-link {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
+           text-gray-400 hover:text-gray-100 hover:bg-gray-750
+           transition-all duration-150;
+  }
+  .nav-link-active {
+    @apply text-gray-100 bg-gray-750 border border-gray-600/50;
+  }
+  .table-row {
+    @apply border-b border-gray-800 hover:bg-gray-800/40 transition-colors duration-100;
+  }
+  .section-title {
+    @apply text-sm font-semibold text-gray-100 mb-4;
+  }
+  .label-muted {
+    @apply text-xs uppercase tracking-widest text-gray-500 font-medium;
   }
 }

@@ -7,33 +7,67 @@ import {
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler)
 
 export default function TimelineChart({ data }) {
-  if (!data?.length) return <div className="card flex items-center justify-center h-48 text-gray-500">Sin datos</div>
-
-  const chartData = {
-    labels: data.map(d => d.hour.slice(11, 16)),
-    datasets: [{
-      label:           'Ataques',
-      data:            data.map(d => d.count),
-      borderColor:     '#00d4ff',
-      backgroundColor: 'rgba(0,212,255,0.1)',
-      fill:            true,
-      tension:         0.4,
-      pointRadius:     3,
-    }],
-  }
+  if (!data?.length) return (
+    <div className="card flex items-center justify-center h-48 text-gray-500 text-sm">
+      Sin datos de actividad reciente
+    </div>
+  )
 
   return (
     <div className="card">
-      <p className="text-sm font-semibold text-gray-300 mb-4">Ataques últimas 24 horas</p>
+      <div className="flex items-center justify-between mb-4">
+        <p className="section-title mb-0">Actividad — últimas 24 horas</p>
+        <span className="text-xs text-gray-500 font-mono">
+          pico: {Math.max(...data.map(d => d.count)).toLocaleString()} ataques/h
+        </span>
+      </div>
       <Line
-        data={chartData}
+        data={{
+          labels: data.map(d => d.hour.slice(11, 16)),
+          datasets: [{
+            label:           'Ataques',
+            data:            data.map(d => d.count),
+            borderColor:     '#06b6d4',
+            backgroundColor: (ctx) => {
+              const canvas = ctx.chart.ctx
+              const gradient = canvas.createLinearGradient(0, 0, 0, 180)
+              gradient.addColorStop(0, 'rgba(6,182,212,0.2)')
+              gradient.addColorStop(1, 'rgba(6,182,212,0)')
+              return gradient
+            },
+            fill:        true,
+            tension:     0.4,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            pointHoverBackgroundColor: '#06b6d4',
+            borderWidth: 2,
+          }],
+        }}
         options={{
           responsive: true,
+          interaction: { mode: 'index', intersect: false },
           scales: {
-            x: { ticks: { color: '#6b7280', maxTicksLimit: 12 }, grid: { color: '#1e2d4e' } },
-            y: { ticks: { color: '#6b7280' }, grid: { color: '#1e2d4e' } },
+            x: {
+              ticks: { color: '#475569', maxTicksLimit: 12, font: { size: 11 } },
+              grid: { color: 'rgba(30,37,64,0.8)', drawBorder: false },
+            },
+            y: {
+              ticks: { color: '#475569', font: { size: 11 } },
+              grid: { color: 'rgba(30,37,64,0.8)', drawBorder: false },
+              beginAtZero: true,
+            },
           },
-          plugins: { legend: { display: false } },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#111827',
+              borderColor: '#1e2540',
+              borderWidth: 1,
+              titleColor: '#94a3b8',
+              bodyColor: '#e2e8f0',
+              padding: 10,
+            },
+          },
         }}
       />
     </div>
