@@ -22,12 +22,12 @@ DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://honeypot_user:honeypot_pa
 
 # Mapa honeypot → (ruta del log, módulo parser)
 SOURCES = {
-    "cowrie":    ("/logs/cowrie/cowrie.json",      cowrie),
-    "dionaea":   ("/logs/dionaea/dionaea.json",     dionaea),
-    "honeytrap": ("/logs/honeytrap/honeytrap.json", honeytrap),
-    "glastopf":  ("/logs/glastopf/glastopf.json",  glastopf),
-    "conpot":    ("/logs/conpot/conpot.json",       conpot),
-    "honeyd":    ("/logs/honeyd/honeyd.log",        honeyd),
+    "cowrie":    ("/logs/cowrie/cowrie.json",       cowrie),
+    "dionaea":   ("/logs/dionaea/dionaea.log",       dionaea),
+    "honeytrap": ("/logs/honeytrap/honeytrap.json",  honeytrap),
+    "glastopf":  ("/logs/glastopf/glastopf.log",    glastopf),
+    "conpot":    ("/logs/conpot/conpot.log",         conpot),
+    "honeyd":    ("/logs/honeyd/honeyd.log",         honeyd),
 }
 
 # Caché de geoip para no repetir peticiones
@@ -74,7 +74,7 @@ class LogHandler(FileSystemEventHandler):
         self.parser  = parser_module
         self.path    = file_path
         self.conn    = conn
-        self._offset = self._get_size()
+        self._offset = 0  # leer desde el principio al arrancar
 
     def _get_size(self) -> int:
         try:

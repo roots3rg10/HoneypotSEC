@@ -1,36 +1,41 @@
-"""
-Parser para logs de Honeyd.
-Honeyd escribe en formato syslog:
-  2024-01-15 10:23:45 tcp(6) - 1.2.3.4 45678 192.168.1.1 22: 1 S
-"""
-import re
-from datetime import datetime
+"""Parser para logs de Honeyd (reimplementación Python 3 asyncio)."""
+import json
+from datetime import datetime, timezone
 from parsers.base import AttackEvent
 
-LOG_RE = re.compile(
-    r"(?P<ts>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\s+"
-    r"(?P<proto>\w+)\(\d+\)\s+\S+\s+"
-    r"(?P<src_ip>[\d.]+)\s+(?P<src_port>\d+)\s+"
-    r"(?P<dst_ip>[\d.]+)\s+(?P<dst_port>\d+)"
-)
-
 def parse_line(line: str) -> AttackEvent | None:
-    m = LOG_RE.search(line)
-    if not m:
+    line = line.strip()
+    if not line.startswith("{"):
         return None
 
     try:
-        ts = datetime.strptime(m.group("ts"), "%Y-%m-%d %H:%M:%S")
-    except ValueError:
-        ts = datetime.utcnow()
+        data = json.loads(line)
+    except json.JSONDecodeError:
+        return None
+
+    src_ip = data.get("source_ip", "")
+    if not src_ip:
+        return None
+
+    try:
+        ts = datetime.fromisoformat(data.get("timestamp", "").replace("Z", "+00:00"))
+    except Exception:
+        ts = datetime.now(timezone.utc)
+
+    dest_port = data.get("dest_port")
+    protocol  = data.get("protocol", "tcp").upper()
+
+    port_names = {23: "Telnet", 25: "SMTP", 80: "HTTP"}
+    service    = port_names.get(dest_port, f"puerto {dest_port}")
 
     return AttackEvent(
         honeypot    = "honeyd",
-        source_ip   = m.group("src_ip"),
+        source_ip   = src_ip,
         timestamp   = ts,
-        source_port = int(m.group("src_port")),
-        dest_port   = int(m.group("dst_port")),
-        protocol    = m.group("proto").upper(),
-        attack_type = "Sondeo de red",
-        raw_data    = {"raw": line.strip()},
+        source_port = data.get("source_port"),
+        dest_port   = dest_port,
+        protocol    = protocol,
+        attack_type = f"Sondeo de red ({service})",
+        payload     = data.get("payload") or None,
+        raw_data    = data,
     )

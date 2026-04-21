@@ -1,42 +1,39 @@
-"""Parser para logs de Glastopf (web honeypot)."""
+"""Parser para logs de Glastopf (reimplementación Python 3 Flask)."""
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from parsers.base import AttackEvent
 
 def parse_line(line: str) -> AttackEvent | None:
+    # Ignorar líneas que no son JSON (ej: mensajes de Flask/Werkzeug)
+    line = line.strip()
+    if not line.startswith("{"):
+        return None
+
     try:
-        data = json.loads(line.strip())
+        data = json.loads(line)
     except json.JSONDecodeError:
         return None
 
-    src_ip = data.get("src_host", "")
+    src_ip = data.get("source_ip", "")
     if not src_ip:
         return None
 
     try:
-        ts = datetime.fromisoformat(data.get("time", "").replace("Z", "+00:00"))
+        ts = datetime.fromisoformat(data.get("timestamp", "").replace("Z", "+00:00"))
     except Exception:
-        ts = datetime.utcnow()
+        ts = datetime.now(timezone.utc)
 
-    pattern = data.get("pattern", "unknown")
-    attack_map = {
-        "sqli":       "SQL Injection",
-        "rfi":        "Remote File Inclusion",
-        "lfi":        "Local File Inclusion",
-        "xss":        "Cross-Site Scripting (XSS)",
-        "phpcode":    "PHP Code Injection",
-        "unknown":    "Ataque web",
-    }
-    attack_type = attack_map.get(pattern, f"Web: {pattern}")
+    method  = data.get("method", "GET")
+    path    = data.get("path", "/")
+    payload = data.get("payload") or data.get("query") or None
 
     return AttackEvent(
         honeypot    = "glastopf",
         source_ip   = src_ip,
         timestamp   = ts,
-        source_port = data.get("src_port"),
         dest_port   = 80,
         protocol    = "HTTP",
-        attack_type = attack_type,
-        payload     = data.get("request_url"),
+        attack_type = f"Petición web {method}",
+        payload     = f"{method} {path}" + (f"?{data['query']}" if data.get("query") else ""),
         raw_data    = data,
     )
