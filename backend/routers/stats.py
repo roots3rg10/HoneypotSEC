@@ -1,3 +1,4 @@
+from typing import Optional
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc, text, distinct
@@ -45,15 +46,29 @@ async def summary(db: AsyncSession = Depends(get_db)):
     )
 
 @router.get("/timeline", response_model=list[TimelinePoint])
-async def timeline(db: AsyncSession = Depends(get_db)):
-    rows = (await db.execute(text("""
-        SELECT to_char(date_trunc('hour', timestamp), 'YYYY-MM-DD HH24:00') AS hour,
-               count(*) AS count
-        FROM attacks
-        WHERE timestamp >= NOW() - INTERVAL '24 hours'
-        GROUP BY hour
-        ORDER BY hour
-    """))).all()
+async def timeline(
+    honeypot: Optional[str] = None,
+    db: AsyncSession = Depends(get_db)
+):
+    if honeypot:
+        rows = (await db.execute(text("""
+            SELECT to_char(date_trunc('hour', timestamp), 'YYYY-MM-DD HH24:00') AS hour,
+                   count(*) AS count
+            FROM attacks
+            WHERE timestamp >= NOW() - INTERVAL '24 hours'
+              AND honeypot = :honeypot
+            GROUP BY hour
+            ORDER BY hour
+        """), {"honeypot": honeypot})).all()
+    else:
+        rows = (await db.execute(text("""
+            SELECT to_char(date_trunc('hour', timestamp), 'YYYY-MM-DD HH24:00') AS hour,
+                   count(*) AS count
+            FROM attacks
+            WHERE timestamp >= NOW() - INTERVAL '24 hours'
+            GROUP BY hour
+            ORDER BY hour
+        """))).all()
     return [TimelinePoint(hour=r[0], count=r[1]) for r in rows]
 
 @router.get("/honeypots", response_model=list[HoneypotStat])
@@ -101,3 +116,39 @@ async def top_ports(db: AsyncSession = Depends(get_db)):
         .limit(15)
     )).all()
     return [TopPort(dest_port=r[0], count=r[1]) for r in rows]
+
+@router.get("/overview")
+async def overview(db: AsyncSession = Depends(get_db)):
+    top_ips = (await db.execute(
+        select(Attack.source_ip, func.count(Attack.id).label("c"), Attack.country)
+        .group_by(Attack.source_ip, Attack.country)
+        .order_by(desc("c")).limit(10)
+    )).all()
+
+    top_ports = (await db.execute(
+        select(Attack.dest_port, func.count(Attack.id).label("c"))
+        .where(Attack.dest_port.isnot(None))
+        .group_by(Attack.dest_port)
+        .order_by(desc("c")).limit(10)
+    )).all()
+
+    top_countries = (await db.execute(
+        select(Attack.country, Attack.country_code, func.count(Attack.id).label("c"))
+        .where(Attack.country.isnot(None))
+        .group_by(Attack.country, Attack.country_code)
+        .order_by(desc("c")).limit(5)
+    )).all()
+
+    protocols = (await db.execute(
+        select(Attack.protocol, func.count(Attack.id).label("c"))
+        .where(Attack.protocol.isnot(None))
+        .group_by(Attack.protocol)
+        .order_by(desc("c"))
+    )).all()
+
+    return {
+        "top_ips":       [{"ip": r[0], "count": r[1], "country": r[2]} for r in top_ips],
+        "top_ports":     [{"port": r[0], "count": r[1]} for r in top_ports],
+        "top_countries": [{"country": r[0], "code": r[1], "count": r[2]} for r in top_countries],
+        "protocols":     [{"protocol": r[0], "count": r[1]} for r in protocols],
+    }
