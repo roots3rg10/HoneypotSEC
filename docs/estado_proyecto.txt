@@ -1,5 +1,5 @@
 ====================================================================
-ESTADO ACTUAL DEL PROYECTO
+ESTADO ACTUAL DEL PROYECTO — [MODO PREMIUM ACTIVADO]
 Plataforma de Honeypots — Guía completa de uso
 Directorio: /home/proyecto
 Fecha: abril 2026
@@ -80,9 +80,9 @@ ACCEDER AL DASHBOARD
 Abrir en el navegador: http://localhost
 
 El dashboard tiene:
-  - Pantalla principal: estadísticas en tiempo real (total de ataques,
-    IPs únicas, ataques hoy, mapa de países, timeline por hora,
-    distribución por honeypot, top IPs atacantes, top puertos).
+  - Pantalla principal (Premium): Estadísticas en tiempo real con estética Glassmorphism,
+    animaciones fluidas (Framer Motion), mapa de amenazas oscuro, timeline interactivo,
+    distribución por honeypot con barras de progreso y feed de ataques tipo terminal.
   - WebSocket activo: los nuevos ataques aparecen sin recargar.
   - Tabla de ataques: lista completa con filtros por honeypot y país.
   - Detalle de ataque: al clicar en uno, muestra todos sus campos.
