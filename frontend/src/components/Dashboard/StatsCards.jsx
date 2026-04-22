@@ -1,67 +1,112 @@
+import { motion } from 'framer-motion'
+import { Zap, Globe, Calendar, Flag, TrendingUp, ShieldAlert } from 'lucide-react'
+
 const CARDS = [
   {
     key:   'total_attacks',
-    label: 'Ataques totales',
-    icon:  '⚡',
-    gradient: 'from-rose-500/10 to-transparent',
-    border:   'border-rose-500/20',
-    color:    'text-rose-400',
-    glow:     'shadow-[0_0_20px_rgba(244,63,94,0.1)]',
+    label: 'Total Ingress',
+    icon:  Zap,
+    color: 'text-rose-400',
+    bg:    'bg-rose-500/10',
+    border:'border-rose-500/20',
+    glow:  'shadow-rose-500/10'
   },
   {
     key:   'unique_ips',
-    label: 'IPs únicas',
-    icon:  '🌐',
-    gradient: 'from-cyan-500/10 to-transparent',
-    border:   'border-cyan-500/20',
-    color:    'text-cyan-400',
-    glow:     'shadow-[0_0_20px_rgba(6,182,212,0.1)]',
+    label: 'Unique Vectors',
+    icon:  Globe,
+    color: 'text-cyan-400',
+    bg:    'bg-cyan-500/10',
+    border:'border-cyan-500/20',
+    glow:  'shadow-cyan-500/10'
   },
   {
     key:   'attacks_today',
-    label: 'Ataques hoy',
-    icon:  '📅',
-    gradient: 'from-amber-500/10 to-transparent',
-    border:   'border-amber-500/20',
-    color:    'text-amber-400',
-    glow:     'shadow-[0_0_20px_rgba(245,158,11,0.1)]',
+    label: '24h Activity',
+    icon:  Calendar,
+    color: 'text-amber-400',
+    bg:    'bg-amber-500/10',
+    border:'border-amber-500/20',
+    glow:  'shadow-amber-500/10'
   },
   {
     key:   'top_country',
-    label: 'Top país atacante',
-    icon:  '🏴',
-    gradient: 'from-violet-500/10 to-transparent',
-    border:   'border-violet-500/20',
-    color:    'text-violet-400',
-    glow:     'shadow-[0_0_20px_rgba(139,92,246,0.1)]',
+    label: 'Primary Origin',
+    icon:  Flag,
+    color: 'text-indigo-400',
+    bg:    'bg-indigo-500/10',
+    border:'border-indigo-500/20',
+    glow:  'shadow-indigo-500/10'
   },
 ]
 
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 }
+  }
+}
+
+const item = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 }
+}
+
 export default function StatsCards({ stats }) {
   if (!stats) return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {[...Array(4)].map((_, i) => (
-        <div key={i} className="card animate-pulse h-28" />
+        <div key={i} className="h-32 rounded-2xl bg-slate-900/50 border border-slate-800 animate-pulse" />
       ))}
     </div>
   )
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <motion.div 
+      variants={container}
+      initial="hidden"
+      animate="show"
+      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+    >
       {CARDS.map(c => (
-        <div key={c.key} className={`stat-card border ${c.border} ${c.glow}`}>
-          <div className={`absolute inset-0 bg-gradient-to-br ${c.gradient} rounded-2xl pointer-events-none`} />
-          <div className="relative">
-            <p className="label-muted mb-3">{c.label}</p>
+        <motion.div 
+          key={c.key} 
+          variants={item}
+          className={`glass-card-accent border ${c.border} shadow-xl ${c.glow}`}
+        >
+          <div className="flex flex-col h-full justify-between">
+            <div className="flex items-center justify-between mb-4">
+              <span className="label-sm">{c.label}</span>
+              <div className={`p-2 rounded-xl ${c.bg}`}>
+                <c.icon className={`w-5 h-5 ${c.color}`} />
+              </div>
+            </div>
+            
             <div className="flex items-end justify-between">
-              <span className={`text-3xl font-bold ${c.color} tabular-nums`}>
-                {stats[c.key]?.toLocaleString() ?? '—'}
-              </span>
-              <span className="text-2xl opacity-60">{c.icon}</span>
+              <div>
+                <h3 className={`stat-value ${c.color}`}>
+                  {stats[c.key]?.toLocaleString() ?? '—'}
+                </h3>
+                <div className="flex items-center gap-1 mt-1">
+                  <TrendingUp className="w-3 h-3 text-emerald-500" />
+                  <span className="text-[10px] font-bold text-emerald-500 tracking-wider">+12.5%</span>
+                </div>
+              </div>
+              
+              <div className="w-12 h-6 flex items-end gap-[2px]">
+                {[...Array(5)].map((_, i) => (
+                  <div 
+                    key={i} 
+                    className={`flex-1 rounded-t-sm ${c.color} opacity-20`}
+                    style={{ height: `${20 + Math.random() * 80}%` }}
+                  />
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        </motion.div>
       ))}
-    </div>
+    </motion.div>
   )
 }

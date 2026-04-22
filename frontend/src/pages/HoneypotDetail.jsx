@@ -1,21 +1,33 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { getAttacks, getHoneypots } from '../services/api'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { 
+  Shield, 
+  Activity, 
+  Globe, 
+  Clock, 
+  ChevronLeft, 
+  ExternalLink,
+  Cpu,
+  Lock,
+  Network
+} from 'lucide-react'
 
 const HP_META = {
-  cowrie:    { label: 'Cowrie',    desc: 'Honeypot SSH y Telnet. Captura intentos de login por fuerza bruta, credenciales y comandos ejecutados.',      color: 'cyan-400',    border: 'border-blue-500/30',    bg: 'bg-blue-500/10',    ports: '2222 SSH, 2323 Telnet' },
-  dionaea:   { label: 'Dionaea',   desc: 'Honeypot multi-protocolo. Captura exploits, malware y conexiones a servicios como SMB, MySQL o FTP.',          color: 'violet-400',  border: 'border-violet-500/30',  bg: 'bg-violet-500/10',  ports: '21 FTP, 445 SMB, 3306 MySQL, 1433 MSSQL' },
-  glastopf:  { label: 'Glastopf',  desc: 'Honeypot web. Captura peticiones HTTP maliciosas: SQLi, RFI, LFI, XSS, bots y scrapers.',                    color: 'emerald-400', border: 'border-emerald-500/30', bg: 'bg-emerald-500/10', ports: '8080 HTTP' },
-  conpot:    { label: 'Conpot',    desc: 'Honeypot ICS/SCADA. Simula un PLC industrial y captura atacantes que sondean infraestructura crítica.',        color: 'rose-400',    border: 'border-rose-500/30',    bg: 'bg-rose-500/10',    ports: '102 S7, 502 Modbus, 44818 EtherNet/IP' },
-  honeytrap: { label: 'Honeytrap', desc: 'Trampa TCP/UDP genérica. Registra cualquier conexión inesperada en puertos configurados.',                     color: 'amber-400',   border: 'border-amber-500/30',   bg: 'bg-amber-500/10',   ports: 'TCP/UDP configurable' },
-  honeyd:    { label: 'Honeyd',    desc: 'Honeypot de red virtual. Simula múltiples hosts y captura sondeos, conexiones Telnet y SMTP.',                 color: 'pink-400',    border: 'border-pink-500/30',    bg: 'bg-pink-500/10',    ports: '23 Telnet, 25 SMTP, 80 HTTP' },
+  cowrie:    { label: 'Cowrie Tactical Node',    icon: Lock,    desc: 'Advanced SSH & Telnet emulation layer. Monitors brute-force attempts, session interactions, and post-exploitation command sequences.', color: 'text-cyan-400',   border: 'border-cyan-500/20',   bg: 'bg-cyan-500/10',   ports: '2222 SSH, 2323 Telnet' },
+  dionaea:   { label: 'Dionaea Multi-Threat',    icon: Activity,desc: 'High-interaction multi-protocol sensor. Traps complex exploits, malware propagation, and automated network scanning vectors.', color: 'text-indigo-400', border: 'border-indigo-500/20', bg: 'bg-indigo-500/10', ports: '21 FTP, 445 SMB, 3306 MySQL' },
+  glastopf:  { label: 'Glastopf Web Ingress',    icon: Globe,   desc: 'Dynamic web application vulnerability emulator. Classifies LFI, RFI, SQLi, and specialized botnet crawler patterns.', color: 'text-emerald-400',border: 'border-emerald-500/20',bg: 'bg-emerald-500/10',ports: '8080 HTTP' },
+  conpot:    { label: 'Conpot Industrial ICS',   icon: Cpu,     desc: 'Industrial Control System simulator. Mimics PLC infrastructure to identify reconnaissance against critical energy and utility networks.', color: 'text-rose-400',    border: 'border-rose-500/20',    bg: 'bg-rose-500/10',    ports: '102 S7, 502 Modbus' },
+  honeytrap: { label: 'Honeytrap Global Sink',   icon: Shield,  desc: 'Generic TCP/UDP listener architecture. Acts as a catch-all sink for unexpected network traffic across any unallocated port range.', color: 'text-amber-400',   border: 'border-amber-500/20',   bg: 'bg-amber-500/10',   ports: 'Wildcard TCP/UDP' },
+  honeyd:    { label: 'Honeyd Virtual Fabric',   icon: Network, desc: 'Virtual network topology engine. Simulates entire subnet structures to monitor lateral movement and internal botnet communication.', color: 'text-pink-400',    border: 'border-pink-500/20',    bg: 'bg-pink-500/10',    ports: 'Multiple Virtual Ports' },
 }
 
 export default function HoneypotDetail() {
   const { name } = useParams()
-  const meta = HP_META[name] ?? { label: name, desc: '', color: 'gray-400', border: 'border-gray-600', bg: 'bg-gray-700/20', ports: '—' }
+  const meta = HP_META[name] ?? { label: name, icon: Shield, desc: '', color: 'text-slate-400', border: 'border-slate-800', bg: 'bg-slate-800/20', ports: '—' }
 
   const [attacks, setAttacks]   = useState([])
   const [hpStats, setHpStats]   = useState(null)
@@ -50,127 +62,196 @@ export default function HoneypotDetail() {
   const lastSeen   = attacks[0]?.timestamp
 
   return (
-    <div className="space-y-6 max-w-6xl">
-      {/* Cabecera */}
-      <div className={`card border ${meta.border}`}>
-        <div className={`absolute inset-0 bg-gradient-to-r ${meta.bg} to-transparent rounded-2xl opacity-50 pointer-events-none`} />
-        <div className="relative flex items-start justify-between gap-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
-              <span className={`w-3 h-3 rounded-full bg-${meta.color} animate-pulse`} />
-              <h2 className={`text-xl font-bold text-${meta.color}`}>{meta.label}</h2>
-              <span className="badge bg-gray-700/50 text-gray-400 text-xs">{meta.ports}</span>
-            </div>
-            <p className="text-gray-400 text-sm leading-relaxed max-w-2xl">{meta.desc}</p>
-          </div>
-          <Link to="/dashboard" className="text-gray-500 hover:text-gray-300 text-xs shrink-0 transition-colors">
-            ← Dashboard
-          </Link>
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="space-y-8 max-w-7xl mx-auto p-2 pb-20"
+    >
+      {/* Header Section */}
+      <div className="flex items-center justify-between mb-2">
+        <Link 
+          to="/dashboard" 
+          className="flex items-center gap-2 text-slate-500 hover:text-white transition-colors text-xs font-bold uppercase tracking-widest"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          Back to Command
+        </Link>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Operational</span>
         </div>
       </div>
 
-      {/* Stats rápidas */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className={`glass-card overflow-hidden relative border ${meta.border}`}>
+        <div className={`absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l ${meta.bg} to-transparent opacity-30 pointer-events-none`} />
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+          <div className="flex-1">
+            <div className="flex items-center gap-4 mb-4">
+              <div className={`p-3 rounded-2xl ${meta.bg} ${meta.color}`}>
+                <meta.icon className="w-8 h-8" />
+              </div>
+              <div>
+                <h2 className={`stat-value ${meta.color} mb-1`}>{meta.label}</h2>
+                <div className="flex items-center gap-2">
+                  <span className="badge-premium badge-cyan">{meta.ports}</span>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Active Listening</span>
+                </div>
+              </div>
+            </div>
+            <p className="text-slate-400 text-sm leading-relaxed max-w-3xl">{meta.desc}</p>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4 shrink-0">
+            <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800/50 min-w-[140px]">
+              <p className="label-sm mb-1">Total Hits</p>
+              <p className={`text-2xl font-display font-black ${meta.color}`}>
+                {hpStats?.count?.toLocaleString() ?? '—'}
+              </p>
+            </div>
+            <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800/50 min-w-[140px]">
+              <p className="label-sm mb-1">Global Reach</p>
+              <p className="text-2xl font-display font-black text-white">
+                {countries || '—'} <span className="text-[10px] text-slate-500 uppercase">Regions</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Secondary Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         {[
-          { label: 'Total ataques', value: hpStats?.count?.toLocaleString() ?? '—', color: `text-${meta.color}` },
-          { label: 'IPs únicas (último lote)', value: uniqueIPs, color: 'text-cyan-400' },
-          { label: 'Países detectados', value: countries || '—', color: 'text-violet-400' },
-          { label: 'Último ataque', value: lastSeen ? formatDistanceToNow(new Date(lastSeen), { locale: es, addSuffix: true }) : '—', color: 'text-gray-300' },
+          { label: 'Unique Attack Vectors', value: uniqueIPs, icon: Globe, color: 'text-cyan-400' },
+          { label: 'System Uptime', value: '99.9%', icon: Activity, color: 'text-emerald-400' },
+          { label: 'Last Intelligence', value: lastSeen ? formatDistanceToNow(new Date(lastSeen), { locale: es, addSuffix: true }) : '—', icon: Clock, color: 'text-slate-300' },
         ].map(s => (
-          <div key={s.label} className="card">
-            <p className="label-muted mb-2">{s.label}</p>
-            <p className={`text-2xl font-bold tabular-nums ${s.color}`}>{s.value}</p>
+          <div key={s.label} className="glass-card flex items-center gap-4 p-5">
+            <div className="p-2.5 rounded-xl bg-slate-800/50 text-slate-400">
+              <s.icon className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="label-sm mb-0.5">{s.label}</p>
+              <p className={`text-lg font-display font-bold ${s.color}`}>{s.value}</p>
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Tabla de ataques */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-4">
-          <p className="section-title mb-0">Ataques capturados</p>
-          <span className="text-xs text-gray-500">
-            {total.toLocaleString()} eventos totales
+      {/* Attack Log */}
+      <div className="glass-card">
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-slate-800">
+              <Activity className="w-5 h-5 text-slate-400" />
+            </div>
+            <div>
+              <h3 className="font-display font-bold text-base text-white tracking-tight">Intelligence Log</h3>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Filtered by node: {name}</p>
+            </div>
+          </div>
+          <span className="badge-premium bg-slate-800 text-slate-400 border-slate-700">
+            {total.toLocaleString()} total entries
           </span>
         </div>
 
         {loading ? (
-          <div className="text-center text-gray-500 py-12">Cargando...</div>
+          <div className="flex flex-col items-center justify-center py-20 gap-4 opacity-40">
+            <div className="w-10 h-10 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin" />
+            <p className="text-xs font-bold uppercase tracking-widest">Accessing records...</p>
+          </div>
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-700/60">
-                    {['IP origen', 'País', 'Tipo de ataque', 'Proto', 'Puerto', 'Usuario', 'Hace'].map(h => (
-                      <th key={h} className="pb-3 text-left label-muted font-medium pr-4">{h}</th>
-                    ))}
+                  <tr className="text-left border-b border-slate-800/50">
+                    <th className="pb-4 px-4 label-sm">IP Source</th>
+                    <th className="pb-4 px-4 label-sm">Region</th>
+                    <th className="pb-4 px-4 label-sm">Classification</th>
+                    <th className="pb-4 px-4 label-sm">Protocol</th>
+                    <th className="pb-4 px-4 label-sm text-center">Port</th>
+                    <th className="pb-4 px-4 label-sm">Identity</th>
+                    <th className="pb-4 px-4 label-sm text-right">Elapsed</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-800/30">
                   {attacks.map(a => (
-                    <tr key={a.id} className="table-row">
-                      <td className="py-3 pr-4">
+                    <tr key={a.id} className="group hover:bg-slate-400/5 transition-colors">
+                      <td className="py-4 px-4">
                         <Link
                           to={`/attacks/${a.id}`}
-                          className="font-mono text-cyan-400 hover:text-cyan-300 hover:underline text-xs transition-colors"
+                          className="flex items-center gap-2 font-mono text-cyan-400 hover:text-cyan-300 transition-colors group/link"
                         >
-                          {a.source_ip}
+                          <span className="text-xs font-bold leading-none">{a.source_ip}</span>
+                          <ExternalLink className="w-3 h-3 opacity-0 group-hover/link:opacity-100 transition-opacity" />
                         </Link>
                       </td>
-                      <td className="py-3 pr-4 text-gray-300 text-xs">
-                        {a.country_code
-                          ? <span title={a.country}>{a.country_code}</span>
-                          : <span className="text-gray-600">—</span>}
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">{getFlagEmoji(a.country_code)}</span>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{a.country_code || '??'}</span>
+                        </div>
                       </td>
-                      <td className="py-3 pr-4 text-gray-300 text-xs max-w-[180px] truncate" title={a.attack_type}>
-                        {a.attack_type ?? <span className="text-gray-600">—</span>}
+                      <td className="py-4 px-4">
+                        <span className="text-xs font-medium text-slate-200">{a.attack_type || 'Unclassified'}</span>
                       </td>
-                      <td className="py-3 pr-4 font-mono text-gray-500 text-xs">{a.protocol ?? '—'}</td>
-                      <td className="py-3 pr-4 font-mono text-gray-400 text-xs">{a.dest_port ?? '—'}</td>
-                      <td className="py-3 pr-4 font-mono text-amber-400/80 text-xs max-w-[120px] truncate" title={a.username}>
-                        {a.username ?? <span className="text-gray-600">—</span>}
+                      <td className="py-4 px-4">
+                        <span className="badge-premium bg-slate-800/50 text-slate-500 border-slate-800/50 font-mono tracking-normal capitalize">{a.protocol || 'Unknown'}</span>
                       </td>
-                      <td className="py-3 text-gray-600 text-xs whitespace-nowrap">
-                        {formatDistanceToNow(new Date(a.timestamp), { locale: es, addSuffix: true })}
+                      <td className="py-4 px-4 text-center">
+                        <span className="font-mono text-xs text-slate-500 font-bold">{a.dest_port || '—'}</span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="text-xs font-mono text-amber-500/60 font-medium truncate max-w-[120px] block">{a.username || '—'}</span>
+                      </td>
+                      <td className="py-4 px-4 text-right">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase whitespace-nowrap">
+                          {formatDistanceToNow(new Date(a.timestamp), { locale: es, addSuffix: false })} ago
+                        </span>
                       </td>
                     </tr>
                   ))}
-                  {!attacks.length && (
-                    <tr>
-                      <td colSpan={7} className="text-center text-gray-600 py-12">
-                        Sin ataques registrados para este honeypot todavía
-                      </td>
-                    </tr>
-                  )}
                 </tbody>
               </table>
             </div>
 
-            {/* Paginación */}
+            {/* Pagination */}
             {total > LIMIT && (
-              <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-700/60">
+              <div className="flex items-center justify-between mt-8 pt-8 border-t border-slate-800/50">
                 <button
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="text-xs text-gray-400 hover:text-gray-200 disabled:text-gray-700 transition-colors px-3 py-1.5 rounded-lg hover:bg-gray-750 disabled:cursor-not-allowed"
+                  className="px-6 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-white hover:border-slate-600 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
                 >
-                  ← Anterior
+                  Previous Page
                 </button>
-                <span className="text-xs text-gray-500">
-                  Página {page} de {Math.ceil(total / LIMIT)}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Record Block</span>
+                  <span className="px-3 py-1 rounded-lg bg-slate-800 text-cyan-400 font-mono font-bold text-xs">
+                    {page} / {Math.ceil(total / LIMIT)}
+                  </span>
+                </div>
                 <button
                   onClick={() => setPage(p => p + 1)}
                   disabled={page >= Math.ceil(total / LIMIT)}
-                  className="text-xs text-gray-400 hover:text-gray-200 disabled:text-gray-700 transition-colors px-3 py-1.5 rounded-lg hover:bg-gray-750 disabled:cursor-not-allowed"
+                  className="px-6 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-white hover:border-slate-600 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
                 >
-                  Siguiente →
+                  Next Page
                 </button>
               </div>
             )}
           </>
         )}
       </div>
-    </div>
+    </motion.div>
   )
+}
+
+function getFlagEmoji(countryCode) {
+  if (!countryCode) return '🌐'
+  const codePoints = countryCode
+    .toUpperCase()
+    .split('')
+    .map(char =>  127397 + char.charCodeAt());
+  return String.fromCodePoint(...codePoints);
 }

@@ -1,10 +1,21 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { getAttack } from '../services/api'
+import { 
+  ChevronLeft, 
+  Terminal, 
+  Database, 
+  Fingerprint, 
+  MapPin, 
+  ShieldAlert,
+  Hash,
+  Clock
+} from 'lucide-react'
 
 const HP_COLOR = {
   cowrie:    'text-blue-400',
-  dionaea:   'text-violet-400',
+  dionaea:   'text-indigo-400',
   glastopf:  'text-emerald-400',
   conpot:    'text-rose-400',
   honeytrap: 'text-amber-400',
@@ -20,66 +31,93 @@ export default function AttackDetail() {
   }, [id])
 
   if (!attack) return (
-    <div className="card text-center text-gray-500 py-16">Cargando...</div>
+    <div className="flex flex-col items-center justify-center py-20 gap-4 opacity-40">
+      <div className="w-10 h-10 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin" />
+      <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Retrieving intelligence packet...</p>
+    </div>
   )
 
-  const hpColor = HP_COLOR[attack.honeypot] ?? 'text-gray-300'
+  const hpColor = HP_COLOR[attack.honeypot] ?? 'text-slate-300'
 
   const fields = [
-    { label: 'Honeypot',       value: attack.honeypot,                               color: hpColor,       mono: false },
-    { label: 'IP origen',      value: attack.source_ip,                              color: 'text-cyan-400', mono: true },
-    { label: 'Puerto origen',  value: attack.source_port ?? '—',                     color: 'text-gray-300', mono: true },
-    { label: 'Puerto destino', value: attack.dest_port ?? '—',                       color: 'text-gray-300', mono: true },
-    { label: 'Protocolo',      value: attack.protocol ?? '—',                        color: 'text-gray-300', mono: true },
-    { label: 'Tipo de ataque', value: attack.attack_type ?? '—',                     color: 'text-amber-400',mono: false },
-    { label: 'País',           value: attack.country ?? '—',                         color: 'text-gray-300', mono: false },
-    { label: 'Ciudad',         value: attack.city ?? '—',                            color: 'text-gray-300', mono: false },
-    { label: 'Usuario',        value: attack.username ?? '—',                        color: 'text-rose-400', mono: true },
-    { label: 'Contraseña',     value: attack.password ?? '—',                        color: 'text-rose-400', mono: true },
-    { label: 'Timestamp',      value: new Date(attack.timestamp).toLocaleString('es-ES'), color: 'text-gray-400', mono: true },
+    { label: 'Honeypot Source', value: attack.honeypot,                               color: hpColor,       icon: ShieldAlert },
+    { label: 'Source Vector',    value: attack.source_ip,                              color: 'text-cyan-400', icon: Hash, mono: true },
+    { label: 'Ingress Port',     value: attack.dest_port ?? '—',                       color: 'text-white',    icon: Database, mono: true },
+    { label: 'Protocol Stack',   value: attack.protocol ?? '—',                        color: 'text-slate-300', icon: Terminal, mono: true },
+    { label: 'Classification',   value: attack.attack_type ?? 'Unclassified',          color: 'text-rose-400', icon: Fingerprint },
+    { label: 'Geo Origin',       value: `${attack.country || 'Unknown'} (${attack.city || '—'})`, color: 'text-slate-300', icon: MapPin },
+    { label: 'Auth Attempt',     value: attack.username ? `${attack.username} : ${attack.password || '****'}` : '—', color: 'text-amber-400', icon: Lock, mono: true },
+    { label: 'Packet Time',      value: new Date(attack.timestamp).toLocaleString('es-ES'), color: 'text-slate-400', icon: Clock, mono: true },
   ]
 
   return (
-    <div className="max-w-3xl space-y-5">
-      <Link to="/dashboard" className="inline-flex items-center gap-1.5 text-gray-500 hover:text-gray-300 text-xs transition-colors">
-        ← Volver al dashboard
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="max-w-4xl mx-auto space-y-8 p-2 pb-20"
+    >
+      <Link to="/dashboard" className="flex items-center gap-2 text-slate-500 hover:text-white transition-colors text-xs font-bold uppercase tracking-widest">
+        <ChevronLeft className="w-4 h-4" />
+        Return to Intelligence Grid
       </Link>
 
-      <div className="card">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="font-bold text-gray-100">
-            Ataque <span className="font-mono text-cyan-400">#{attack.id}</span>
-          </h2>
-          <span className={`badge bg-gray-700/40 ${hpColor} capitalize`}>{attack.honeypot}</span>
+      <div className="glass-card overflow-hidden">
+        <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-800/50">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-2xl bg-slate-800/50">
+              <Fingerprint className="w-8 h-8 text-cyan-400" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-display font-black text-white tracking-tight">
+                Threat Packet <span className="text-cyan-400 font-mono">#{attack.id.toString().padStart(6, '0')}</span>
+              </h2>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">High-Interaction Telemetry</p>
+            </div>
+          </div>
+          <div className={`badge-premium ${hpColor} border-current/20 bg-current/5 px-4 py-2 uppercase`}>
+            {attack.honeypot}
+          </div>
         </div>
 
-        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {fields.map(({ label, value, color, mono }) => (
-            <div key={label} className="bg-gray-800/60 border border-gray-700/40 rounded-xl p-3">
-              <dt className="label-muted mb-1">{label}</dt>
-              <dd className={`text-sm break-all ${color} ${mono ? 'font-mono' : 'font-medium'}`}>{value}</dd>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {fields.map(({ label, value, color, icon: Icon, mono }) => (
+            <div key={label} className="p-4 rounded-2xl bg-slate-900/40 border border-slate-800/50 hover:border-slate-700 transition-colors">
+              <div className="flex items-center gap-2 mb-2">
+                <Icon className="w-3.5 h-3.5 text-slate-500" />
+                <dt className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{label}</dt>
+              </div>
+              <dd className={`text-sm break-all ${color} ${mono ? 'font-mono' : 'font-bold'}`}>{value}</dd>
             </div>
           ))}
-        </dl>
+        </div>
       </div>
 
       {attack.payload && (
-        <div className="card">
-          <p className="label-muted mb-3">Payload capturado</p>
-          <pre className="text-xs text-emerald-400 bg-gray-950 border border-gray-700/40 rounded-xl p-4 overflow-x-auto whitespace-pre-wrap font-mono leading-relaxed">
-            {attack.payload}
-          </pre>
+        <div className="glass-card border-emerald-500/10">
+          <div className="flex items-center gap-3 mb-6">
+            <Terminal className="w-5 h-5 text-emerald-500" />
+            <h3 className="text-sm font-bold text-white uppercase tracking-widest">Captured Payload</h3>
+          </div>
+          <div className="relative group">
+            <div className="absolute -inset-1 bg-emerald-500/10 rounded-2xl blur opacity-25 group-hover:opacity-50 transition-opacity" />
+            <pre className="relative text-xs text-emerald-400/90 bg-slate-950 border border-slate-800 rounded-xl p-6 overflow-x-auto whitespace-pre-wrap font-mono leading-relaxed custom-scrollbar">
+              {attack.payload}
+            </pre>
+          </div>
         </div>
       )}
 
       {attack.raw_data && (
-        <div className="card">
-          <p className="label-muted mb-3">Datos raw (JSON)</p>
-          <pre className="text-xs text-gray-400 bg-gray-950 border border-gray-700/40 rounded-xl p-4 overflow-x-auto font-mono leading-relaxed">
+        <div className="glass-card">
+          <div className="flex items-center gap-3 mb-6">
+            <Database className="w-5 h-5 text-slate-400" />
+            <h3 className="text-sm font-bold text-white uppercase tracking-widest">Raw Packet Data</h3>
+          </div>
+          <pre className="text-[10px] text-slate-400 bg-slate-950 border border-slate-800 rounded-xl p-6 overflow-x-auto font-mono leading-relaxed custom-scrollbar max-h-80">
             {JSON.stringify(attack.raw_data, null, 2)}
           </pre>
         </div>
       )}
-    </div>
+    </motion.div>
   )
 }

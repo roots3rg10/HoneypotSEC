@@ -1,99 +1,131 @@
 import { NavLink } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { 
+  LayoutDashboard, 
+  GraduationCap, 
+  Shield, 
+  Activity, 
+  Globe, 
+  Cpu, 
+  Layers, 
+  Zap,
+  ChevronRight
+} from 'lucide-react'
 
 const NAV_LINKS = [
-  { to: '/dashboard', label: 'Dashboard', icon: <IconGrid /> },
-  { to: '/education', label: 'Centro Educativo', icon: <IconBook /> },
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/education', label: 'Academy', icon: GraduationCap },
 ]
 
 const HONEYPOTS = [
-  { name: 'cowrie',    label: 'Cowrie',    desc: 'SSH / Telnet',   color: 'bg-blue-500',    text: 'text-blue-400',   border: 'border-blue-500/30'   },
-  { name: 'dionaea',   label: 'Dionaea',   desc: 'Multi-protocolo',color: 'bg-violet-500',  text: 'text-violet-400', border: 'border-violet-500/30' },
-  { name: 'glastopf',  label: 'Glastopf',  desc: 'Web App',        color: 'bg-emerald-500', text: 'text-emerald-400',border: 'border-emerald-500/30'},
-  { name: 'conpot',    label: 'Conpot',    desc: 'ICS / SCADA',    color: 'bg-rose-500',    text: 'text-rose-400',   border: 'border-rose-500/30'   },
-  { name: 'honeytrap', label: 'Honeytrap', desc: 'TCP / UDP',      color: 'bg-amber-500',   text: 'text-amber-400',  border: 'border-amber-500/30'  },
-  { name: 'honeyd',    label: 'Honeyd',    desc: 'Red virtual',    color: 'bg-pink-500',    text: 'text-pink-400',   border: 'border-pink-500/30'   },
+  { name: 'cowrie',    label: 'Cowrie',    desc: 'SSH / Telnet',   icon: Shield,   color: 'text-blue-400',   bg: 'bg-blue-400/10' },
+  { name: 'dionaea',   label: 'Dionaea',   desc: 'Multi-proto',    icon: Layers,   color: 'text-indigo-400', bg: 'bg-indigo-400/10' },
+  { name: 'glastopf',  label: 'Glastopf',  desc: 'Web App',        icon: Globe,    color: 'text-emerald-400',bg: 'bg-emerald-400/10' },
+  { name: 'conpot',    label: 'Conpot',    desc: 'ICS / SCADA',    icon: Cpu,      color: 'text-rose-400',   bg: 'bg-rose-400/10' },
+  { name: 'honeytrap', label: 'Honeytrap', desc: 'TCP / UDP',      icon: Activity, color: 'text-amber-400',  bg: 'bg-amber-400/10' },
+  { name: 'honeyd',    label: 'Honeyd',    desc: 'Virtual Net',    icon: Zap,      color: 'text-pink-400',   bg: 'bg-pink-400/10' },
 ]
 
 export default function Sidebar() {
   return (
-    <aside className="w-64 bg-gray-900 border-r border-gray-700/50 flex flex-col shrink-0">
-      {/* Logo */}
-      <div className="px-5 py-5 border-b border-gray-700/50">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center">
-            <span className="text-cyan-400 text-base">⬡</span>
+    <aside className="w-72 bg-slate-950/50 backdrop-blur-xl border-r border-slate-800/50 flex flex-col shrink-0 z-50">
+      {/* Logo Section */}
+      <div className="px-8 py-8">
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-4"
+        >
+          <div className="relative">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+              <Shield className="w-5 h-5 text-white" />
+            </div>
+            <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-slate-950 flex items-center justify-center border border-slate-800">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            </div>
           </div>
           <div>
-            <p className="text-gray-100 font-bold text-sm tracking-wide">HoneyWatch</p>
-            <p className="text-gray-500 text-xs">Plataforma de Honeypots</p>
+            <h2 className="font-display font-bold text-lg leading-tight tracking-tight text-white">
+              Honey<span className="text-cyan-400">SEC</span>
+            </h2>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 font-bold">Tactical Intelligence</p>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Main Navigation */}
+      <div className="flex-1 px-4 space-y-8 overflow-y-auto custom-scrollbar">
+        <div>
+          <p className="label-sm px-4 mb-4">Main Monitor</p>
+          <div className="space-y-1">
+            {NAV_LINKS.map((link, idx) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                className={({ isActive }) => `
+                  group relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300
+                  ${isActive 
+                    ? 'text-cyan-400 bg-cyan-400/10 border border-cyan-400/20' 
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'}
+                `}
+              >
+                <link.icon className="w-5 h-5" />
+                <span className="font-medium tracking-wide">{link.label}</span>
+                <ChevronRight className="w-4 h-4 ml-auto opacity-0 -translate-x-2 group-hover:opacity-40 group-hover:translate-x-0 transition-all" />
+              </NavLink>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <p className="label-sm px-4 mb-4">Honeypot Nodes</p>
+          <div className="space-y-1">
+            {HONEYPOTS.map((hp) => (
+              <NavLink
+                key={hp.name}
+                to={`/honeypots/${hp.name}`}
+                className={({ isActive }) => `
+                  group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300
+                  ${isActive 
+                    ? `bg-slate-900 border border-slate-700/50 shadow-lg shadow-black/20 ${hp.color}` 
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'}
+                `}
+              >
+                <div className={`p-2 rounded-lg transition-colors ${hp.bg}`}>
+                  <hp.icon className="w-4 h-4" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold tracking-wide leading-none mb-1">{hp.label}</p>
+                  <p className="text-[10px] text-slate-500 font-medium">{hp.desc}</p>
+                </div>
+                <div className={`w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)] animate-pulse`} />
+              </NavLink>
+            ))}
           </div>
         </div>
       </div>
 
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {/* Navegación principal */}
-        <p className="label-muted px-3 mb-2">Navegación</p>
-        {NAV_LINKS.map(l => (
-          <NavLink
-            key={l.to}
-            to={l.to}
-            className={({ isActive }) =>
-              `nav-link ${isActive ? 'nav-link-active' : ''}`
-            }
-          >
-            <span className="w-4 h-4 shrink-0 text-gray-400">{l.icon}</span>
-            <span>{l.label}</span>
-          </NavLink>
-        ))}
-
-        {/* Honeypots */}
-        <p className="label-muted px-3 pt-5 pb-2">Honeypots activos</p>
-        {HONEYPOTS.map(h => (
-          <NavLink
-            key={h.name}
-            to={`/honeypots/${h.name}`}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
-               transition-all duration-150 group
-               ${isActive
-                 ? `bg-gray-750 border ${h.border} ${h.text}`
-                 : 'text-gray-400 hover:text-gray-200 hover:bg-gray-750'}`
-            }
-          >
-            <span className={`w-2 h-2 rounded-full ${h.color} shrink-0 animate-pulse`} />
-            <span className="font-medium flex-1">{h.label}</span>
-            <span className="text-gray-600 text-xs group-hover:text-gray-400 transition-colors">{h.desc}</span>
-          </NavLink>
-        ))}
-      </nav>
-
-      {/* Footer */}
-      <div className="px-5 py-4 border-t border-gray-700/50">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-          <span className="text-gray-500 text-xs">11 contenedores activos</span>
+      {/* Footer Section */}
+      <div className="p-6 mt-auto">
+        <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800/50 backdrop-blur-sm">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 rounded-lg bg-emerald-500/10">
+              <Activity className="w-4 h-4 text-emerald-400" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-white uppercase tracking-wider">Network Health</p>
+              <p className="text-[10px] text-slate-500">Operational Stable</p>
+            </div>
+          </div>
+          <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: '92%' }}
+              className="h-full bg-gradient-to-r from-emerald-500 to-cyan-500"
+            />
+          </div>
         </div>
       </div>
     </aside>
-  )
-}
-
-function IconGrid() {
-  return (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-4 h-4">
-      <rect x="1" y="1" width="6" height="6" rx="1" />
-      <rect x="9" y="1" width="6" height="6" rx="1" />
-      <rect x="1" y="9" width="6" height="6" rx="1" />
-      <rect x="9" y="9" width="6" height="6" rx="1" />
-    </svg>
-  )
-}
-
-function IconBook() {
-  return (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-4 h-4">
-      <path d="M2 2.5A1.5 1.5 0 013.5 1h9A1.5 1.5 0 0114 2.5v11a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 13.5v-11z" />
-      <path d="M5 5h6M5 8h6M5 11h4" />
-    </svg>
   )
 }
