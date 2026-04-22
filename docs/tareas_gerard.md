@@ -2,7 +2,8 @@
 
 **Repositorio:** https://github.com/roots3rg10/HoneypotSEC  
 **Web del proyecto:** http://192.168.1.40  
-**Última actualización del repo:** 21 abril 2026
+**Última actualización del repo:** 22 abril 2026
+**Estado de las tareas:** ✅ TODAS COMPLETADAS (Timeline filter, Stats overview, Glastopf classifier)
 
 ---
 

@@ -110,8 +110,11 @@ Endpoints disponibles:
     → {"total_attacks":N, "unique_ips":N, "attacks_today":N,
        "top_honeypot":"cowrie", "top_country":"China", ...}
 
-  GET /api/stats/timeline
-    → ataques por hora en las últimas 24h
+  GET /api/stats/timeline?honeypot=NAME
+    → ataques por hora en las últimas 24h (opcional: filtrar por honeypot)
+
+  GET /api/stats/overview
+    → resumen global (top IPs, puertos, países y protocolos) en una sola llamada
 
   GET /api/stats/honeypots
     → recuento de ataques por honeypot
