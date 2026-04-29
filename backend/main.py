@@ -1,6 +1,6 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from routers import attacks, stats, education
+from routers import attacks, stats, education, news
 import asyncio
 import json
 
@@ -16,6 +16,7 @@ app.add_middleware(
 app.include_router(attacks.router)
 app.include_router(stats.router)
 app.include_router(education.router)
+app.include_router(news.router)
 
 # ─── WebSocket para ataques en tiempo real ────────────────────────
 class ConnectionManager:

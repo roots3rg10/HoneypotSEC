@@ -1,6 +1,7 @@
 import json
 import re
 from datetime import datetime, timezone
+from urllib.parse import unquote
 from parsers.base import AttackEvent
 
 ATTACK_PATTERNS = [
@@ -17,7 +18,12 @@ ATTACK_PATTERNS = [
 ]
 
 def classify(path: str, query: str, payload: str) -> str:
-    text = f"{path}?{query} {payload}".lower()
+    parts = [path]
+    if query:
+        parts.append(f"?{query}")
+    if payload:
+        parts.append(f" {payload}")
+    text = unquote("".join(parts)).strip().lower()
     for pattern, label in ATTACK_PATTERNS:
         if pattern.search(text):
             return label
