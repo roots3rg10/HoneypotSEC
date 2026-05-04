@@ -1,18 +1,22 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, distinct
 from typing import Optional
+
 from database import get_db
-from models import EducationArticle
+from models import EducationArticle, User
 from schemas import ArticleOut, ArticleDetail
+from security import get_current_user
 
 router = APIRouter(prefix="/api/education", tags=["education"])
 
+
 @router.get("/articles", response_model=list[ArticleOut])
 async def list_articles(
-    category:  Optional[str] = None,
+    category:   Optional[str] = None,
     difficulty: Optional[str] = None,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    _:  User = Depends(get_current_user),
 ):
     q = select(EducationArticle).order_by(EducationArticle.id)
     if category:
@@ -22,8 +26,13 @@ async def list_articles(
     result = await db.execute(q)
     return result.scalars().all()
 
+
 @router.get("/articles/{slug}", response_model=ArticleDetail)
-async def get_article(slug: str, db: AsyncSession = Depends(get_db)):
+async def get_article(
+    slug: str,
+    db: AsyncSession = Depends(get_db),
+    _:  User = Depends(get_current_user),
+):
     result = await db.execute(
         select(EducationArticle).where(EducationArticle.slug == slug)
     )
@@ -32,9 +41,12 @@ async def get_article(slug: str, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Artículo no encontrado")
     return article
 
+
 @router.get("/categories")
-async def get_categories(db: AsyncSession = Depends(get_db)):
-    from sqlalchemy import distinct
+async def get_categories(
+    db: AsyncSession = Depends(get_db),
+    _:  User = Depends(get_current_user),
+):
     result = await db.execute(
         select(distinct(EducationArticle.category)).order_by(EducationArticle.category)
     )

@@ -2,20 +2,26 @@ from typing import Optional
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc, text, distinct
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
+
 from database import get_db
-from models import Attack
+from models import Attack, User
 from schemas import SummaryStats, TimelinePoint, HoneypotStat, CountryStat, TopIP, TopPort
+from security import get_current_user
 
 router = APIRouter(prefix="/api/stats", tags=["stats"])
 
+
 @router.get("/summary", response_model=SummaryStats)
-async def summary(db: AsyncSession = Depends(get_db)):
+async def summary(
+    db: AsyncSession = Depends(get_db),
+    _:  User = Depends(get_current_user),
+):
     today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
 
-    total        = (await db.execute(select(func.count(Attack.id)))).scalar_one()
-    unique_ips   = (await db.execute(select(func.count(distinct(Attack.source_ip))))).scalar_one()
-    today_count  = (await db.execute(
+    total       = (await db.execute(select(func.count(Attack.id)))).scalar_one()
+    unique_ips  = (await db.execute(select(func.count(distinct(Attack.source_ip))))).scalar_one()
+    today_count = (await db.execute(
         select(func.count(Attack.id)).where(Attack.timestamp >= today)
     )).scalar_one()
 
@@ -45,10 +51,12 @@ async def summary(db: AsyncSession = Depends(get_db)):
         top_attack_type = top_type_row[0] if top_type_row else None,
     )
 
+
 @router.get("/timeline", response_model=list[TimelinePoint])
 async def timeline(
     honeypot: Optional[str] = None,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    _:  User = Depends(get_current_user),
 ):
     if honeypot:
         rows = (await db.execute(text("""
@@ -71,16 +79,24 @@ async def timeline(
         """))).all()
     return [TimelinePoint(hour=r[0], count=r[1]) for r in rows]
 
+
 @router.get("/honeypots", response_model=list[HoneypotStat])
-async def honeypot_stats(db: AsyncSession = Depends(get_db)):
+async def honeypot_stats(
+    db: AsyncSession = Depends(get_db),
+    _:  User = Depends(get_current_user),
+):
     rows = (await db.execute(
         select(Attack.honeypot, func.count(Attack.id).label("c"))
         .group_by(Attack.honeypot).order_by(desc("c"))
     )).all()
     return [HoneypotStat(honeypot=r[0], count=r[1]) for r in rows]
 
+
 @router.get("/countries", response_model=list[CountryStat])
-async def country_stats(db: AsyncSession = Depends(get_db)):
+async def country_stats(
+    db: AsyncSession = Depends(get_db),
+    _:  User = Depends(get_current_user),
+):
     rows = (await db.execute(
         select(
             Attack.country,
@@ -96,8 +112,12 @@ async def country_stats(db: AsyncSession = Depends(get_db)):
     )).all()
     return [CountryStat(country=r[0], country_code=r[1], count=r[2], latitude=r[3], longitude=r[4]) for r in rows]
 
+
 @router.get("/top-ips", response_model=list[TopIP])
-async def top_ips(db: AsyncSession = Depends(get_db)):
+async def top_ips(
+    db: AsyncSession = Depends(get_db),
+    _:  User = Depends(get_current_user),
+):
     rows = (await db.execute(
         select(Attack.source_ip, func.count(Attack.id).label("c"), Attack.country)
         .group_by(Attack.source_ip, Attack.country)
@@ -106,8 +126,12 @@ async def top_ips(db: AsyncSession = Depends(get_db)):
     )).all()
     return [TopIP(source_ip=r[0], count=r[1], country=r[2]) for r in rows]
 
+
 @router.get("/top-ports", response_model=list[TopPort])
-async def top_ports(db: AsyncSession = Depends(get_db)):
+async def top_ports(
+    db: AsyncSession = Depends(get_db),
+    _:  User = Depends(get_current_user),
+):
     rows = (await db.execute(
         select(Attack.dest_port, func.count(Attack.id).label("c"))
         .where(Attack.dest_port.isnot(None))
@@ -117,29 +141,33 @@ async def top_ports(db: AsyncSession = Depends(get_db)):
     )).all()
     return [TopPort(dest_port=r[0], count=r[1]) for r in rows]
 
+
 @router.get("/overview")
-async def overview(db: AsyncSession = Depends(get_db)):
-    top_ips = (await db.execute(
+async def overview(
+    db: AsyncSession = Depends(get_db),
+    _:  User = Depends(get_current_user),
+):
+    top_ips_rows = (await db.execute(
         select(Attack.source_ip, func.count(Attack.id).label("c"), Attack.country)
         .group_by(Attack.source_ip, Attack.country)
         .order_by(desc("c")).limit(10)
     )).all()
 
-    top_ports = (await db.execute(
+    top_ports_rows = (await db.execute(
         select(Attack.dest_port, func.count(Attack.id).label("c"))
         .where(Attack.dest_port.isnot(None))
         .group_by(Attack.dest_port)
         .order_by(desc("c")).limit(10)
     )).all()
 
-    top_countries = (await db.execute(
+    top_countries_rows = (await db.execute(
         select(Attack.country, Attack.country_code, func.count(Attack.id).label("c"))
         .where(Attack.country.isnot(None))
         .group_by(Attack.country, Attack.country_code)
         .order_by(desc("c")).limit(5)
     )).all()
 
-    protocols = (await db.execute(
+    protocols_rows = (await db.execute(
         select(Attack.protocol, func.count(Attack.id).label("c"))
         .where(Attack.protocol.isnot(None))
         .group_by(Attack.protocol)
@@ -147,8 +175,8 @@ async def overview(db: AsyncSession = Depends(get_db)):
     )).all()
 
     return {
-        "top_ips":       [{"ip": r[0], "count": r[1], "country": r[2]} for r in top_ips],
-        "top_ports":     [{"port": r[0], "count": r[1]} for r in top_ports],
-        "top_countries": [{"country": r[0], "code": r[1], "count": r[2]} for r in top_countries],
-        "protocols":     [{"protocol": r[0], "count": r[1]} for r in protocols],
+        "top_ips":       [{"ip": r[0], "count": r[1], "country": r[2]} for r in top_ips_rows],
+        "top_ports":     [{"port": r[0], "count": r[1]} for r in top_ports_rows],
+        "top_countries": [{"country": r[0], "code": r[1], "count": r[2]} for r in top_countries_rows],
+        "protocols":     [{"protocol": r[0], "count": r[1]} for r in protocols_rows],
     }

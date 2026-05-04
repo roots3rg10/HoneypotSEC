@@ -1,12 +1,15 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, desc, text
+from sqlalchemy import select, func, desc
 from typing import Optional
+
 from database import get_db
-from models import Attack
+from models import Attack, User
 from schemas import AttackOut, AttackList
+from dependencies import require_admin
 
 router = APIRouter(prefix="/api/attacks", tags=["attacks"])
+
 
 @router.get("", response_model=AttackList)
 async def list_attacks(
@@ -14,10 +17,11 @@ async def list_attacks(
     limit:    int = Query(50, ge=1, le=200),
     honeypot: Optional[str] = None,
     country:  Optional[str] = None,
-    db:       AsyncSession = Depends(get_db)
+    db:       AsyncSession = Depends(get_db),
+    _:        User = Depends(require_admin),
 ):
     offset = (page - 1) * limit
-    q = select(Attack).order_by(desc(Attack.timestamp))
+    q  = select(Attack).order_by(desc(Attack.timestamp))
     cq = select(func.count(Attack.id))
 
     if honeypot:
@@ -27,11 +31,16 @@ async def list_attacks(
         q  = q.where(Attack.country_code == country)
         cq = cq.where(Attack.country_code == country)
 
-    total  = (await db.execute(cq)).scalar_one()
-    items  = (await db.execute(q.offset(offset).limit(limit))).scalars().all()
+    total = (await db.execute(cq)).scalar_one()
+    items = (await db.execute(q.offset(offset).limit(limit))).scalars().all()
     return AttackList(total=total, page=page, limit=limit, items=items)
 
+
 @router.get("/{attack_id}", response_model=AttackOut)
-async def get_attack(attack_id: int, db: AsyncSession = Depends(get_db)):
+async def get_attack(
+    attack_id: int,
+    db: AsyncSession = Depends(get_db),
+    _:  User = Depends(require_admin),
+):
     result = await db.execute(select(Attack).where(Attack.id == attack_id))
     return result.scalar_one()

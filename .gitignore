@@ -39,3 +39,12 @@ logs/
 # Archivos de contexto internos de sesión
 conversacion.txt
 echo.txt
+
+# Certificados TLS (generados localmente, nunca al repo)
+nginx/certs/*.pem
+nginx/certs/*.crt
+nginx/certs/*.key
+
+# Backups de base de datos (datos reales, nunca al repo)
+database/backups/*.sql.gz
+database/backups/backup.log

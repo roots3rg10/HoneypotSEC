@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Lock, User, AlertCircle } from 'lucide-react'
-
-const CREDENTIALS = { username: 'usuario', password: 'honeypot' }
+import { useAuth } from '../context/AuthContext'
 
 export default function Login() {
   const navigate = useNavigate()
+  const { login } = useAuth()
   const [form,    setForm]    = useState({ username: '', password: '' })
   const [error,   setError]   = useState('')
   const [loading, setLoading] = useState(false)
@@ -16,18 +16,18 @@ export default function Login() {
     setError('')
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
     setLoading(true)
-    setTimeout(() => {
-      if (form.username === CREDENTIALS.username && form.password === CREDENTIALS.password) {
-        localStorage.setItem('auth', 'true')
-        navigate('/dashboard', { replace: true })
-      } else {
-        setError('Usuario o contraseña incorrectos.')
-        setLoading(false)
-      }
-    }, 400)
+    try {
+      await login(form.username, form.password)
+      navigate('/dashboard', { replace: true })
+    } catch (err) {
+      const msg = err?.response?.data?.detail || 'Error de conexión. Inténtalo de nuevo.'
+      setError(msg)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

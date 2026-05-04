@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { getArticle } from '../services/api'
 import ReactMarkdown from 'react-markdown'
 import { ChevronLeft, BookOpen, Tag, Clock } from 'lucide-react'
+import Quiz from '../components/Quiz'
 
 const DIFFICULTY_LABELS = {
   principiante: { label: 'Principiante', color: 'rgba(255,255,255,0.6)',  bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.1)'  },
@@ -111,12 +112,17 @@ export default function ArticlePage() {
         )}
       </div>
 
+      {/* Quiz */}
+      <div className="glass-card p-9">
+        <Quiz slug={slug} />
+      </div>
+
       <div className="flex items-center justify-center pt-4">
         <div className="flex items-center gap-3 px-6 py-3 rounded-2xl"
           style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
           <BookOpen className="w-4 h-4 text-amber-400" />
           <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.35)' }}>
-            Fin del artículo
+            Fin del módulo
           </p>
         </div>
       </div>

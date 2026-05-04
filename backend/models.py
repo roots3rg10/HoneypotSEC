@@ -1,7 +1,20 @@
-from sqlalchemy import Column, Integer, String, Text, Double, DateTime, ARRAY
+from sqlalchemy import Column, Integer, String, Text, Double, DateTime, ARRAY, Boolean
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql import func
 from database import Base
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id              = Column(Integer, primary_key=True, index=True)
+    username        = Column(String(100), nullable=False, unique=True)
+    email           = Column(String(255), nullable=False, unique=True)
+    hashed_password = Column(String(255), nullable=False)
+    role            = Column(String(20), nullable=False, default="employee")
+    is_active       = Column(Boolean, nullable=False, default=True)
+    created_at      = Column(DateTime(timezone=True), server_default=func.now())
+
 
 class Attack(Base):
     __tablename__ = "attacks"
@@ -24,6 +37,29 @@ class Attack(Base):
     payload      = Column(Text)
     session_id   = Column(String(255))
     raw_data     = Column(JSONB)
+
+
+class QuizQuestion(Base):
+    __tablename__ = "quiz_questions"
+
+    id            = Column(Integer, primary_key=True, index=True)
+    article_slug  = Column(String(255), nullable=False, index=True)
+    question      = Column(Text, nullable=False)
+    options       = Column(JSONB, nullable=False)
+    correct_index = Column(Integer, nullable=False)
+    order_num     = Column(Integer, nullable=False, default=0)
+
+
+class QuizResult(Base):
+    __tablename__ = "quiz_results"
+
+    id           = Column(Integer, primary_key=True, index=True)
+    user_id      = Column(Integer, nullable=False, index=True)
+    article_slug = Column(String(255), nullable=False, index=True)
+    score        = Column(Integer, nullable=False)
+    max_score    = Column(Integer, nullable=False)
+    completed_at = Column(DateTime(timezone=True), server_default=func.now())
+
 
 class EducationArticle(Base):
     __tablename__ = "education_articles"
