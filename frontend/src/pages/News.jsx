@@ -35,7 +35,9 @@ export default function News() {
 
   useEffect(() => { load() }, [])
 
-  const filtered = filter === 'Todos' ? articles : articles.filter(a => a.source === filter)
+  const filtered = filter === 'Todos'
+    ? [...articles].sort((a, b) => new Date(b.published || 0) - new Date(a.published || 0))
+    : articles.filter(a => a.source === filter)
 
   return (
     <div className="min-h-screen text-white" style={{ background: '#050505' }}>
