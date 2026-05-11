@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider }  from './context/AuthContext'
+import { ThemeProvider } from './context/ThemeContext'
 import Sidebar           from './components/Layout/Sidebar'
 import Navbar            from './components/Layout/Navbar'
 import ProtectedRoute    from './components/ProtectedRoute'
@@ -20,7 +21,7 @@ function AppLayout({ children }) {
       <Sidebar />
       <div className="flex flex-col flex-1 overflow-hidden min-w-0">
         <Navbar />
-        <main className="flex-1 overflow-y-auto p-8 bg-slate-950 custom-scrollbar">
+        <main className="flex-1 overflow-y-auto p-8 custom-scrollbar" style={{ background: 'var(--bg)' }}>
           {children}
         </main>
       </div>
@@ -30,6 +31,7 @@ function AppLayout({ children }) {
 
 export default function App() {
   return (
+    <ThemeProvider>
     <AuthProvider>
       <BrowserRouter>
         <Routes>
@@ -63,5 +65,6 @@ export default function App() {
         </Routes>
       </BrowserRouter>
     </AuthProvider>
+    </ThemeProvider>
   )
 }

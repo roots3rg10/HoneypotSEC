@@ -14,6 +14,7 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
 from parsers import cowrie, dionaea, honeytrap, glastopf, conpot, honeyd
+from alerts import check_and_alert
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [collector] %(message)s")
 log = logging.getLogger(__name__)
@@ -97,6 +98,7 @@ class LogHandler(FileSystemEventHandler):
                         try:
                             insert_event(self.conn, parsed)
                             log.info(f"[{parsed.honeypot}] {parsed.attack_type} from {parsed.source_ip}")
+                            check_and_alert(parsed)
                         except Exception as e:
                             log.error(f"DB error: {e}")
                             self.conn = get_conn()

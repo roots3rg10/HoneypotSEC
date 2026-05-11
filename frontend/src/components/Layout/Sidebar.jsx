@@ -14,6 +14,7 @@ import {
   ClipboardList,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import { honeypotHex } from '../../constants/honeypotColors'
 
 const NAV_LINKS = [
   { to: '/dashboard',         label: 'Dashboard',        icon: LayoutDashboard, adminOnly: false },
@@ -41,10 +42,10 @@ export default function Sidebar() {
 
   return (
     <aside className="w-68 flex flex-col shrink-0 z-50"
-      style={{ width: '272px', background: 'rgba(0,0,0,0.6)', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
+      style={{ width: '272px', background: 'var(--sidebar-bg)', borderRight: '1px solid var(--sidebar-border)', transition: 'background 0.3s ease, border-color 0.2s ease' }}>
 
       {/* Logo */}
-      <div className="px-7 py-7 border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+      <div className="px-7 py-7 border-b" style={{ borderColor: 'var(--card-header-border)' }}>
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -107,7 +108,10 @@ export default function Sidebar() {
                     <p className="text-xs font-semibold leading-none mb-0.5">{hp.label}</p>
                     <p className="text-[10px] text-white/25">{hp.desc}</p>
                   </div>
-                  <div className="w-1.5 h-1.5 rounded-full bg-amber-400/60 shrink-0" />
+                  <div
+                    className="w-1.5 h-1.5 rounded-full shrink-0"
+                    style={{ backgroundColor: honeypotHex(hp.name), boxShadow: `0 0 5px ${honeypotHex(hp.name)}99` }}
+                  />
                 </NavLink>
               ))}
             </div>
@@ -116,8 +120,8 @@ export default function Sidebar() {
       </div>
 
       {/* User footer */}
-      <div className="p-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-        <div className="px-3 py-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+      <div className="p-4 border-t" style={{ borderColor: 'var(--card-header-border)' }}>
+        <div className="px-3 py-3 rounded-xl" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
           <div className="flex items-center gap-2.5 mb-2.5">
             <Activity className="w-3.5 h-3.5 text-amber-400 shrink-0" />
             <div className="flex-1 min-w-0">

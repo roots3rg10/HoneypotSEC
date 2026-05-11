@@ -1,16 +1,111 @@
-import { MapContainer, TileLayer, CircleMarker, Tooltip } from 'react-leaflet'
+import { useEffect, useRef } from 'react'
+import createGlobe from 'cobe'
 import { Globe } from 'lucide-react'
-import 'leaflet/dist/leaflet.css'
+import { honeypotHex, honeypotRgb } from '../../constants/honeypotColors'
+import { useTheme } from '../../context/ThemeContext'
 
-function getFlagEmoji(countryCode) {
-  if (!countryCode) return '🌐'
-  return String.fromCodePoint(...countryCode.toUpperCase().split('').map(c => 127397 + c.charCodeAt()))
+const CONTAINER_H = 364
+
+function toMarkers(attacks) {
+  return (attacks ?? [])
+    .filter(a => a.latitude != null && a.longitude != null)
+    .map(a => ({
+      location: [a.latitude, a.longitude],
+      size:     Math.min(0.05 + Math.log2(a.count + 1) * 0.015, 0.14),
+      color:    honeypotRgb(a.honeypot),
+    }))
 }
 
-export default function AttackMap({ countries }) {
+function Legend({ attacks }) {
+  const honeypots = [...new Set((attacks ?? []).map(a => a.honeypot))].sort()
+  if (!honeypots.length) return null
   return (
-    <div className="glass-card p-0 overflow-hidden relative" style={{ height: '420px' }}>
-      <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.3)' }}>
+    <div className="absolute bottom-3 left-4 flex flex-wrap gap-x-4 gap-y-1 z-10">
+      {honeypots.map(hp => (
+        <div key={hp} className="flex items-center gap-1.5">
+          <div
+            className="w-2 h-2 rounded-full"
+            style={{ backgroundColor: honeypotHex(hp), boxShadow: `0 0 5px ${honeypotHex(hp)}99` }}
+          />
+          <span className="text-[10px] font-bold uppercase tracking-widest"
+            style={{ color: 'var(--txt-2)' }}>
+            {hp}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+export default function AttackMap({ attacks }) {
+  const wrapRef   = useRef(null)
+  const canvasRef = useRef(null)
+  const globeRef  = useRef(null)
+  const rafRef    = useRef(null)
+  const phiRef    = useRef(0)
+  const { isDark } = useTheme()
+
+  // Re-crear el globo cuando cambia el tema
+  useEffect(() => {
+    const wrap   = wrapRef.current
+    const canvas = canvasRef.current
+    if (!wrap || !canvas) return
+
+    canvas.style.opacity = '0'
+    const w = wrap.offsetWidth || 600
+
+    const globe = createGlobe(canvas, {
+      devicePixelRatio:  2,
+      width:             w,
+      height:            CONTAINER_H,
+      phi:               phiRef.current,
+      theta:             0.25,
+      dark:              isDark ? 1 : 0,
+      diffuse:           1.3,
+      mapSamples:        16000,
+      mapBrightness:     isDark ? 6 : 9,
+      mapBaseBrightness: isDark ? 0 : 0.05,
+      scale:             1.1,
+      baseColor:         isDark ? [0.1, 0.1, 0.1] : [0.88, 0.92, 0.97],
+      markerColor:       [0.98, 0.75, 0.14],
+      glowColor:         isDark ? [0.2, 0.1, 0.01] : [0.65, 0.78, 0.92],
+      markers:           toMarkers(attacks),
+    })
+
+    globeRef.current = globe
+    canvas.style.opacity = '1'
+
+    const animate = () => {
+      phiRef.current += 0.004
+      globe.update({ phi: phiRef.current })
+      rafRef.current = requestAnimationFrame(animate)
+    }
+    rafRef.current = requestAnimationFrame(animate)
+
+    return () => {
+      cancelAnimationFrame(rafRef.current)
+      globe.destroy()
+      globeRef.current = null
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDark])
+
+  // Actualizar marcadores cuando cambian los datos
+  useEffect(() => {
+    if (globeRef.current && attacks?.length) {
+      globeRef.current.update({ markers: toMarkers(attacks) })
+    }
+  }, [attacks])
+
+  const totalCountries = new Set((attacks ?? []).map(a => a.country)).size
+
+  return (
+    <div className="glass-card p-0 overflow-hidden" style={{ height: '420px' }}>
+
+      {/* Header */}
+      <div
+        className="px-5 py-4 flex items-center justify-between card-header"
+      >
         <div className="flex items-center gap-2.5">
           <Globe className="w-4 h-4 text-amber-400" />
           <h3 className="font-display font-bold text-sm tracking-widest text-white uppercase">
@@ -19,53 +114,36 @@ export default function AttackMap({ countries }) {
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-amber-400" style={{ boxShadow: '0 0 6px rgba(251,191,36,0.6)' }} />
-            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.35)' }}>
+            <div
+              className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"
+              style={{ boxShadow: '0 0 6px rgba(251,191,36,0.6)' }}
+            />
+            <span className="text-[10px] font-bold uppercase tracking-widest"
+              style={{ color: 'var(--txt-2)' }}>
               Ataques activos
             </span>
           </div>
-          <span className="badge-premium badge-amber">
-            {countries?.length ?? 0} países
-          </span>
+          <span className="badge-premium badge-amber">{totalCountries} países</span>
         </div>
       </div>
 
-      <MapContainer
-        center={[20, 10]}
-        zoom={2.2}
-        style={{ height: '364px', background: '#050505' }}
-        zoomControl={false}
-        attributionControl={false}
-        className="z-10"
+      {/* Globe */}
+      <div
+        ref={wrapRef}
+        style={{
+          height:     `${CONTAINER_H}px`,
+          background: 'var(--globe-bg)',
+          overflow:   'hidden',
+          position:   'relative',
+          transition: 'background 0.3s ease',
+        }}
       >
-        <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
-        {countries?.map(c => c.latitude && c.longitude && (
-          <CircleMarker
-            key={c.country_code}
-            center={[c.latitude, c.longitude]}
-            radius={Math.min(4 + Math.log2(c.count + 1) * 2.5, 20)}
-            pathOptions={{
-              color:       'rgba(251,191,36,0.9)',
-              fillColor:   '#FBBF24',
-              fillOpacity: 0.25,
-              weight:      1.5,
-            }}
-          >
-            <Tooltip direction="top" offset={[0, -10]} opacity={1}>
-              <div style={{ background: '#0a0a0a', border: '1px solid rgba(251,191,36,0.2)', padding: '8px 12px', borderRadius: '10px', minWidth: '120px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                  <span style={{ fontSize: '18px' }}>{getFlagEmoji(c.country_code)}</span>
-                  <span style={{ fontFamily: 'Outfit', fontWeight: 700, color: 'white', fontSize: '12px' }}>{c.country}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Total hits</span>
-                  <span style={{ fontFamily: 'JetBrains Mono', fontWeight: 700, color: '#FBBF24', fontSize: '13px' }}>{c.count.toLocaleString()}</span>
-                </div>
-              </div>
-            </Tooltip>
-          </CircleMarker>
-        ))}
-      </MapContainer>
+        <canvas
+          ref={canvasRef}
+          style={{ width: '100%', height: '100%', display: 'block', opacity: 0 }}
+        />
+        <Legend attacks={attacks} />
+      </div>
     </div>
   )
 }

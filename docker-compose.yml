@@ -47,7 +47,14 @@ services:
     build: ./collector
     container_name: honeypot_collector
     environment:
-      DATABASE_URL: ${DATABASE_SYNC_URL}
+      DATABASE_URL:      ${DATABASE_SYNC_URL}
+      SMTP_HOST:         ${SMTP_HOST:-}
+      SMTP_PORT:         ${SMTP_PORT:-587}
+      SMTP_USER:         ${SMTP_USER:-}
+      SMTP_PASSWORD:     ${SMTP_PASSWORD:-}
+      SMTP_FROM:         ${SMTP_FROM:-alertas@honeypot.local}
+      ALERT_EMAIL_TO:    ${ALERT_EMAIL_TO:-}
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
     volumes:
       - cowrie_logs:/logs/cowrie:ro
       - dionaea_logs:/logs/dionaea:ro
@@ -64,8 +71,11 @@ services:
 
   # ─── Cowrie (SSH / Telnet) ────────────────────────────────────
   cowrie:
-    image: cowrie/cowrie:2.5.0
+    image: cowrie/cowrie:latest
     container_name: honeypot_cowrie
+    ports:
+      - "2222:2222"
+      - "2323:2323"
     volumes:
       - cowrie_logs:/home/cowrie/var/log/cowrie
       - ./honeypots/cowrie/cowrie.cfg:/home/cowrie/etc/cowrie.cfg:ro
@@ -75,8 +85,17 @@ services:
 
   # ─── Dionaea (SMB / FTP / HTTP / malware) ────────────────────
   dionaea:
-    image: dinotools/dionaea:0.11.0
+    image: dinotools/dionaea:latest
     container_name: honeypot_dionaea
+    ports:
+      - "21:21"
+      - "42:42"
+      - "69:69/udp"
+      - "445:445"
+      - "1433:1433"
+      - "1723:1723"
+      - "1883:1883"
+      - "3306:3306"
     volumes:
       - dionaea_logs:/opt/dionaea/var/log/dionaea
     networks:
@@ -85,7 +104,7 @@ services:
 
   # ─── Honeytrap (TCP/UDP genérico) ────────────────────────────
   honeytrap:
-    image: honeytrap/honeytrap:1.0.0
+    image: honeytrap/honeytrap:latest
     container_name: honeypot_honeytrap
     volumes:
       - honeytrap_logs:/data
@@ -98,6 +117,8 @@ services:
   glastopf:
     build: ./honeypots/glastopf
     container_name: honeypot_glastopf
+    ports:
+      - "8080:80"
     volumes:
       - glastopf_logs:/opt/glastopf/log
     networks:
@@ -106,8 +127,12 @@ services:
 
   # ─── Conpot (ICS / SCADA) ────────────────────────────────────
   conpot:
-    image: honeynet/conpot:0.6.0
+    image: honeynet/conpot:latest
     container_name: honeypot_conpot
+    ports:
+      - "102:102"
+      - "502:502"
+      - "44818:44818"
     volumes:
       - conpot_logs:/var/log/conpot
     networks:
@@ -136,7 +161,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_DB:   ${POSTGRES_DB}
     volumes:
-      - ./database/backup.sh:/backup.sh:ro
+      - ./database/backup.sh:/backup.sh
       - ./database/backups:/backups
     command: >
       sh -c "chmod +x /backup.sh &&

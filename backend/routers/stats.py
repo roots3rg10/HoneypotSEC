@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 from database import get_db
 from models import Attack, User
-from schemas import SummaryStats, TimelinePoint, HoneypotStat, CountryStat, TopIP, TopPort
+from schemas import SummaryStats, TimelinePoint, HoneypotStat, CountryStat, CountryHoneypotStat, TopIP, TopPort
 from security import get_current_user
 
 router = APIRouter(prefix="/api/stats", tags=["stats"])
@@ -15,7 +15,6 @@ router = APIRouter(prefix="/api/stats", tags=["stats"])
 @router.get("/summary", response_model=SummaryStats)
 async def summary(
     db: AsyncSession = Depends(get_db),
-    _:  User = Depends(get_current_user),
 ):
     today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
 
@@ -83,7 +82,6 @@ async def timeline(
 @router.get("/honeypots", response_model=list[HoneypotStat])
 async def honeypot_stats(
     db: AsyncSession = Depends(get_db),
-    _:  User = Depends(get_current_user),
 ):
     rows = (await db.execute(
         select(Attack.honeypot, func.count(Attack.id).label("c"))
@@ -111,6 +109,34 @@ async def country_stats(
         .limit(50)
     )).all()
     return [CountryStat(country=r[0], country_code=r[1], count=r[2], latitude=r[3], longitude=r[4]) for r in rows]
+
+
+@router.get("/countries-by-honeypot", response_model=list[CountryHoneypotStat])
+async def country_honeypot_stats(
+    db: AsyncSession = Depends(get_db),
+    _:  User = Depends(get_current_user),
+):
+    rows = (await db.execute(
+        select(
+            Attack.country,
+            Attack.country_code,
+            Attack.honeypot,
+            func.count(Attack.id).label("c"),
+            func.avg(Attack.latitude).label("lat"),
+            func.avg(Attack.longitude).label("lon"),
+        )
+        .where(Attack.country.isnot(None))
+        .group_by(Attack.country, Attack.country_code, Attack.honeypot)
+        .order_by(desc("c"))
+        .limit(200)
+    )).all()
+    return [
+        CountryHoneypotStat(
+            country=r[0], country_code=r[1], honeypot=r[2],
+            count=r[3], latitude=r[4], longitude=r[5],
+        )
+        for r in rows
+    ]
 
 
 @router.get("/top-ips", response_model=list[TopIP])

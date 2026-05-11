@@ -1,12 +1,6 @@
 import { motion } from 'framer-motion'
 import { Zap, Globe, Calendar, Flag, TrendingUp } from 'lucide-react'
-
-const CARDS = [
-  { key: 'total_attacks', label: 'Total de ataques', icon: Zap,      accent: '#FBBF24' },
-  { key: 'unique_ips',    label: 'IPs únicas',       icon: Globe,    accent: '#ffffff' },
-  { key: 'attacks_today', label: 'Actividad (24h)',  icon: Calendar, accent: '#FBBF24' },
-  { key: 'top_country',   label: 'País principal',   icon: Flag,     accent: '#ffffff' },
-]
+import { useTheme } from '../../context/ThemeContext'
 
 const container = {
   hidden: { opacity: 0 },
@@ -15,11 +9,20 @@ const container = {
 const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } }
 
 export default function StatsCards({ stats }) {
+  const { isDark } = useTheme()
+
+  const CARDS = [
+    { key: 'total_attacks', label: 'Total de ataques', icon: Zap,      accent: '#FBBF24' },
+    { key: 'unique_ips',    label: 'IPs únicas',       icon: Globe,    accent: isDark ? '#ffffff' : 'var(--txt)' },
+    { key: 'attacks_today', label: 'Actividad (24h)',  icon: Calendar, accent: '#FBBF24' },
+    { key: 'top_country',   label: 'País principal',   icon: Flag,     accent: isDark ? '#ffffff' : 'var(--txt)' },
+  ]
+
   if (!stats) return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
       {[...Array(4)].map((_, i) => (
         <div key={i} className="h-32 rounded-2xl animate-pulse"
-          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }} />
+          style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }} />
       ))}
     </div>
   )
