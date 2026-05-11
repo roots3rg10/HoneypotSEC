@@ -20,8 +20,8 @@ export default function Login() {
     e.preventDefault()
     setLoading(true)
     try {
-      await login(form.username, form.password)
-      navigate('/dashboard', { replace: true })
+      const me = await login(form.username, form.password)
+      navigate(me.role === 'client' ? '/client/dashboard' : '/dashboard', { replace: true })
     } catch (err) {
       const msg = err?.response?.data?.detail || 'Error de conexión. Inténtalo de nuevo.'
       setError(msg)
@@ -133,7 +133,13 @@ export default function Login() {
           </form>
         </div>
 
-        <p className="text-center mt-6 text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
+        <p className="text-center mt-5 text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
+          ¿Eres empresa?{' '}
+          <Link to="/register" className="font-bold text-amber-400 hover:text-amber-300 transition-colors">
+            Crear cuenta gratuita
+          </Link>
+        </p>
+        <p className="text-center mt-3 text-xs" style={{ color: 'rgba(255,255,255,0.18)' }}>
           <Link to="/" className="hover:text-white transition-colors">← Volver a la web</Link>
         </p>
       </motion.div>

@@ -10,12 +10,13 @@ api.interceptors.request.use(config => {
 })
 
 // Auth
-export const loginApi  = (username, password) =>
+export const loginApi    = (username, password) =>
   api.post('/auth/login', new URLSearchParams({ username, password }), {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
   })
-export const getMeApi  = () => api.get('/auth/me')
-export const logoutApi = () => api.post('/auth/logout')
+export const getMeApi    = () => api.get('/auth/me')
+export const logoutApi   = () => api.post('/auth/logout')
+export const registerApi = (data) => api.post('/auth/register', data)
 
 // Attacks
 export const getAttacks  = (params) => api.get('/attacks', { params })
@@ -25,7 +26,8 @@ export const getAttack   = (id)     => api.get(`/attacks/${id}`)
 export const getSummary  = ()       => api.get('/stats/summary')
 export const getTimeline = ()       => api.get('/stats/timeline')
 export const getHoneypots = ()      => api.get('/stats/honeypots')
-export const getCountries = ()      => api.get('/stats/countries')
+export const getCountries            = () => api.get('/stats/countries')
+export const getCountriesByHoneypot  = () => api.get('/stats/countries-by-honeypot')
 export const getTopIPs   = ()       => api.get('/stats/top-ips')
 export const getTopPorts = ()       => api.get('/stats/top-ports')
 export const getOverview = ()       => api.get('/stats/overview')
