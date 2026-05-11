@@ -14,6 +14,10 @@ class User(Base):
     role            = Column(String(20), nullable=False, default="employee")
     is_active       = Column(Boolean, nullable=False, default=True)
     created_at      = Column(DateTime(timezone=True), server_default=func.now())
+    # Campos para clientes empresa (role="client")
+    company_name    = Column(String(255), nullable=True)
+    company_sector  = Column(String(100), nullable=True)
+    plan            = Column(String(20),  nullable=True, default="basico")
 
 
 class Attack(Base):

@@ -11,15 +11,27 @@ class TokenResponse(BaseModel):
 
 
 class UserOut(BaseModel):
-    id:         int
-    username:   str
-    email:      str
-    role:       str
-    is_active:  bool
-    created_at: datetime
+    id:             int
+    username:       str
+    email:          str
+    role:           str
+    is_active:      bool
+    created_at:     datetime
+    company_name:   Optional[str] = None
+    company_sector: Optional[str] = None
+    plan:           Optional[str] = None
 
     class Config:
         from_attributes = True
+
+
+class ClientRegisterIn(BaseModel):
+    company_name:   str
+    company_sector: str
+    username:       str
+    email:          EmailStr
+    password:       str
+    plan:           str = "basico"
 
 
 # ─── Attacks ──────────────────────────────────────────────────
@@ -76,6 +88,15 @@ class HoneypotStat(BaseModel):
 class CountryStat(BaseModel):
     country:      str
     country_code: Optional[str]
+    count:        int
+    latitude:     Optional[float]
+    longitude:    Optional[float]
+
+
+class CountryHoneypotStat(BaseModel):
+    country:      str
+    country_code: Optional[str]
+    honeypot:     str
     count:        int
     latitude:     Optional[float]
     longitude:    Optional[float]

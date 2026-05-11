@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from database import get_db, engine
 from models import Base, User
@@ -15,9 +15,17 @@ from routers import auth
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Crear admin inicial si no existe ningún usuario admin
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Migración segura: añadir columnas cliente si no existen
+        for col, definition in [
+            ("company_name",   "VARCHAR(255)"),
+            ("company_sector", "VARCHAR(100)"),
+            ("plan",           "VARCHAR(20) DEFAULT 'basico'"),
+        ]:
+            await conn.execute(text(
+                f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {col} {definition}"
+            ))
 
     async for db in get_db():
         result = await db.execute(select(User).where(User.role == "admin").limit(1))
