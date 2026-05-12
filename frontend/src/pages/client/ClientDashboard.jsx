@@ -4,6 +4,7 @@ import { ShieldAlert, Activity, Globe, Cpu, TrendingUp, TrendingDown, AlertTrian
 import { getSummary, getOverview, getAttacks } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import AttackMap from '../../components/Dashboard/AttackMap'
+import PlanGate, { hasPlan } from '../../components/PlanGate'
 
 function KpiCard({ icon: Icon, label, value, sub, trend, color, delay = 0 }) {
   return (
@@ -58,6 +59,9 @@ function ThreatLevel({ score }) {
 
 export default function ClientDashboard() {
   const { user } = useAuth()
+  const plan = user?.plan || 'basico'
+  const isPro = hasPlan(plan, 'profesional')
+
   const [summary,  setSummary]  = useState(null)
   const [overview, setOverview] = useState(null)
   const [alerts,   setAlerts]   = useState([])
@@ -65,12 +69,15 @@ export default function ClientDashboard() {
   useEffect(() => {
     getSummary().then(r => setSummary(r.data)).catch(() => {})
     getOverview().then(r => setOverview(r.data)).catch(() => {})
-    getAttacks({ limit: 8, order: 'desc' }).then(r => setAlerts(r.data?.items || [])).catch(() => {})
-  }, [])
+    getAttacks({ limit: isPro ? 8 : 3, order: 'desc' }).then(r => setAlerts(r.data?.items || [])).catch(() => {})
+  }, [isPro])
 
   const attacks24h = summary?.attacks_24h ?? '—'
   const totalIPs   = overview?.top_ips?.length ?? '—'
   const score      = summary ? Math.max(0, 100 - Math.min(100, Math.floor((summary.attacks_24h || 0) / 3))) : 50
+
+  const sensoresLabel = plan === 'basico' ? '2 / 6' : '6 / 6'
+  const sensoresSub   = plan === 'basico' ? 'Amplía con plan Pro' : 'Todos operativos'
 
   const severityColor = { high: '#fb7185', medium: '#FBBF24', low: '#34d399' }
   function severity(a) {
@@ -87,7 +94,7 @@ export default function ClientDashboard() {
           Bienvenido, {user?.company_name || user?.username}
         </h1>
         <p className="text-sm mt-1" style={{ color: 'var(--txt-2)' }}>
-          Resumen de seguridad en tiempo real · {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+          Resumen de seguridad · {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
         </p>
       </div>
 
@@ -99,8 +106,8 @@ export default function ClientDashboard() {
           trend={summary ? 12 : undefined} color="#FBBF24" delay={0.05} />
         <KpiCard icon={Globe} label="IPs únicas detectadas" value={typeof totalIPs === 'number' ? totalIPs : '—'}
           sub="últimas 24 horas" color="#60a5fa" delay={0.1} />
-        <KpiCard icon={Cpu} label="Sensores activos" value="6 / 6"
-          sub="Todos operativos" color="#34d399" delay={0.15} />
+        <KpiCard icon={Cpu} label="Sensores activos" value={sensoresLabel}
+          sub={sensoresSub} color="#34d399" delay={0.15} />
       </div>
 
       {/* Mapa + Score */}
@@ -113,9 +120,15 @@ export default function ClientDashboard() {
             <Globe className="w-4 h-4 text-amber-400" />
             <span className="font-display font-bold text-sm" style={{ color: 'var(--txt)' }}>Mapa de ataques en vivo</span>
           </div>
-          <div style={{ height: '280px' }}>
-            <AttackMap />
-          </div>
+          <PlanGate
+            requires="profesional"
+            title="Mapa geográfico"
+            description="Visualiza el origen de cada ataque en tiempo real en el plan Profesional."
+          >
+            <div style={{ height: '280px' }}>
+              <AttackMap />
+            </div>
+          </PlanGate>
         </motion.div>
 
         <motion.div
@@ -138,9 +151,17 @@ export default function ClientDashboard() {
         initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.3 }}
         className="rounded-2xl"
         style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-        <div className="px-5 py-4 border-b flex items-center gap-2" style={{ borderColor: 'var(--card-header-border)' }}>
-          <AlertTriangle className="w-4 h-4 text-amber-400" />
-          <span className="font-display font-bold text-sm" style={{ color: 'var(--txt)' }}>Alertas recientes</span>
+        <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--card-header-border)' }}>
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-400" />
+            <span className="font-display font-bold text-sm" style={{ color: 'var(--txt)' }}>Alertas recientes</span>
+          </div>
+          {!isPro && (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+              style={{ background: 'rgba(251,191,36,0.1)', color: '#FBBF24', border: '1px solid rgba(251,191,36,0.2)' }}>
+              Últimas 3 · Plan Básico
+            </span>
+          )}
         </div>
         <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
           {alerts.length === 0 && (
@@ -168,6 +189,13 @@ export default function ClientDashboard() {
             )
           })}
         </div>
+        {!isPro && alerts.length > 0 && (
+          <div className="px-5 py-3 border-t" style={{ borderColor: 'var(--border)' }}>
+            <PlanGate requires="profesional" compact
+              title="Historial completo de alertas"
+              description="Accede al feed completo con filtros y tiempo real." />
+          </div>
+        )}
       </motion.div>
     </div>
   )

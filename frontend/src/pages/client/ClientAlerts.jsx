@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Bell, Filter, AlertTriangle, AlertCircle, Info } from 'lucide-react'
 import { getAttacks } from '../../services/api'
+import { useAuth } from '../../context/AuthContext'
+import PlanGate, { hasPlan } from '../../components/PlanGate'
 
 const HIGH_TYPES = ['sql_injection', 'xss', 'path_traversal', 'rce', 'command_injection', 'smb_exploit', 'ics_attack']
 const MED_TYPES  = ['ssh_bruteforce', 'ftp_login', 'telnet_login', 'web_scan']
@@ -22,6 +24,10 @@ const SEV_CONFIG = {
 const FILTER_OPTIONS = ['Todas', 'Alta', 'Media', 'Baja']
 
 export default function ClientAlerts() {
+  const { user } = useAuth()
+  const plan  = user?.plan || 'basico'
+  const isPro = hasPlan(plan, 'profesional')
+
   const [attacks, setAttacks] = useState([])
   const [filter,  setFilter]  = useState('Todas')
   const [loading, setLoading] = useState(true)
@@ -33,9 +39,9 @@ export default function ClientAlerts() {
       .finally(() => setLoading(false))
   }, [])
 
-  const filtered = attacks
-    .map(a => ({ ...a, _sev: getSeverity(a) }))
-    .filter(a => filter === 'Todas' || SEV_CONFIG[a._sev]?.label === filter)
+  const allWithSev = attacks.map(a => ({ ...a, _sev: getSeverity(a) }))
+  const filtered   = allWithSev.filter(a => filter === 'Todas' || SEV_CONFIG[a._sev]?.label === filter)
+  const displayed  = isPro ? filtered : filtered.slice(0, 5)
 
   const counts = { high: 0, medium: 0, low: 0 }
   attacks.forEach(a => counts[getSeverity(a)]++)
@@ -49,9 +55,16 @@ export default function ClientAlerts() {
         </div>
       </div>
 
+      {/* Banner upgrade para básico */}
+      {!isPro && (
+        <PlanGate requires="profesional" compact
+          title="Alertas en tiempo real"
+          description="Recibe notificaciones instantáneas push y por email en el plan Profesional." />
+      )}
+
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-4">
-        {(['high', 'medium', 'low'] ).map(sev => {
+        {(['high', 'medium', 'low']).map(sev => {
           const cfg = SEV_CONFIG[sev]
           const Icon = cfg.icon
           return (
@@ -91,14 +104,14 @@ export default function ClientAlerts() {
         {loading && (
           <p className="px-5 py-8 text-sm text-center" style={{ color: 'var(--txt-3)' }}>Cargando alertas...</p>
         )}
-        {!loading && filtered.length === 0 && (
+        {!loading && displayed.length === 0 && (
           <p className="px-5 py-8 text-sm text-center" style={{ color: 'var(--txt-3)' }}>
             <Bell className="w-8 h-8 mx-auto mb-2 opacity-20" />
             Sin alertas para este filtro
           </p>
         )}
         <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
-          {filtered.map((a, i) => {
+          {displayed.map((a, i) => {
             const cfg = SEV_CONFIG[a._sev]
             const Icon = cfg.icon
             return (
@@ -133,6 +146,15 @@ export default function ClientAlerts() {
             )
           })}
         </div>
+
+        {/* Gate al final si es básico y hay más */}
+        {!isPro && filtered.length > 5 && (
+          <div className="px-5 py-4 border-t" style={{ borderColor: 'var(--border)' }}>
+            <PlanGate requires="profesional" compact
+              title={`${filtered.length - 5} alertas más disponibles`}
+              description="Desbloquea el historial completo y filtros avanzados." />
+          </div>
+        )}
       </div>
     </div>
   )
