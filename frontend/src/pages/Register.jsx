@@ -52,10 +52,7 @@ export default function Register() {
     setLoading(true)
     setError('')
     try {
-      const res = await registerApi(form)
-      const { access_token } = res.data
-      localStorage.setItem('token', access_token)
-      // Refrescar contexto auth con el nuevo token
+      await registerApi(form)
       await login(form.username, form.password)
       navigate('/client/dashboard', { replace: true })
     } catch (err) {
@@ -159,7 +156,18 @@ export default function Register() {
                   {SECTORS.map(s => <option key={s} value={s} style={{ background: '#111' }}>{s}</option>)}
                 </select>
               </div>
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center gap-2 text-xs px-3 py-2.5 rounded-xl"
+                  style={{ background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.2)', color: '#fb7185' }}
+                >
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  {error}
+                </motion.div>
+              )}
               <button
+                type="button"
                 onClick={() => {
                   if (!form.company_name.trim() || !form.company_sector) { setError('Completa todos los campos'); return }
                   setError(''); setStep(2)
@@ -213,9 +221,20 @@ export default function Register() {
                   />
                 </div>
               </div>
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center gap-2 text-xs px-3 py-2.5 rounded-xl"
+                  style={{ background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.2)', color: '#fb7185' }}
+                >
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  {error}
+                </motion.div>
+              )}
               <div className="flex gap-3 mt-2">
-                <button onClick={() => setStep(1)} className="btn-outline flex-1 py-3">← Atrás</button>
+                <button type="button" onClick={() => { setError(''); setStep(1) }} className="btn-outline flex-1 py-3">← Atrás</button>
                 <button
+                  type="button"
                   onClick={() => {
                     if (!form.username.trim() || !form.email.trim() || form.password.length < 8) {
                       setError('Completa todos los campos (contraseña mínimo 8 caracteres)'); return
@@ -287,8 +306,9 @@ export default function Register() {
               )}
 
               <div className="flex gap-3">
-                <button onClick={() => setStep(2)} className="btn-outline flex-1 py-3">← Atrás</button>
+                <button type="button" onClick={() => { setError(''); setStep(2) }} className="btn-outline flex-1 py-3">← Atrás</button>
                 <button
+                  type="button"
                   onClick={handleSubmit}
                   disabled={loading}
                   className="btn-premium flex-[2] py-3 disabled:opacity-50"
@@ -299,16 +319,6 @@ export default function Register() {
             </motion.div>
           )}
 
-          {error && step < 3 && (
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              className="flex items-center gap-2 text-xs px-3 py-2.5 rounded-xl mt-4"
-              style={{ background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.2)', color: '#fb7185' }}
-            >
-              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-              {error}
-            </motion.div>
-          )}
         </div>
 
         <p className="text-center mt-5 text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>

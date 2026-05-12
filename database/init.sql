@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
     email           VARCHAR(255) NOT NULL UNIQUE,
     hashed_password VARCHAR(255) NOT NULL,
     role            VARCHAR(20)  NOT NULL DEFAULT 'employee'
-                        CHECK (role IN ('admin', 'employee')),
+                        CHECK (role IN ('admin', 'employee', 'client')),
     is_active       BOOLEAN      NOT NULL DEFAULT TRUE,
     created_at      TIMESTAMPTZ DEFAULT NOW()
 );
