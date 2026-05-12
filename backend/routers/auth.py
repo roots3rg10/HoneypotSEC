@@ -2,10 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from database import get_db
 from models import User
-from schemas import TokenResponse, UserOut, ClientRegisterIn
+from schemas import TokenResponse, UserOut, ClientRegisterIn, AdminCreateClientIn
 from security import verify_password, hash_password, create_access_token, get_current_user
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -58,11 +59,53 @@ async def register(
         plan            = data.plan,
     )
     db.add(user)
-    await db.commit()
-    await db.refresh(user)
+    try:
+        await db.commit()
+        await db.refresh(user)
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="El nombre de usuario o email ya está en uso",
+        )
 
     token = create_access_token({"sub": str(user.id), "role": user.role})
     return TokenResponse(access_token=token, token_type="bearer", role=user.role)
+
+
+@router.post("/admin/create-client", response_model=UserOut, status_code=status.HTTP_201_CREATED)
+async def admin_create_client(
+    data: AdminCreateClientIn,
+    db:   AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Solo admins")
+
+    dup = await db.execute(
+        select(User).where((User.username == data.username) | (User.email == data.email))
+    )
+    if dup.scalar_one_or_none():
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Usuario o email ya existe")
+
+    user = User(
+        username        = data.username,
+        email           = data.email,
+        hashed_password = hash_password(data.password),
+        role            = "client",
+        is_active       = True,
+        company_name    = data.company_name,
+        company_sector  = data.company_sector or "Tecnología y Software",
+        plan            = data.plan,
+    )
+    db.add(user)
+    try:
+        await db.commit()
+        await db.refresh(user)
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Usuario o email ya existe")
+    return user
 
 
 @router.post("/logout")

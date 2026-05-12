@@ -34,6 +34,15 @@ class ClientRegisterIn(BaseModel):
     plan:           str = "basico"
 
 
+class AdminCreateClientIn(BaseModel):
+    username:       str
+    email:          EmailStr
+    password:       str
+    company_name:   str
+    company_sector: Optional[str] = None
+    plan:           str = "profesional"
+
+
 # ─── Attacks ──────────────────────────────────────────────────
 class AttackOut(BaseModel):
     id:           int
