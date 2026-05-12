@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Shield, Activity, Newspaper, ChevronRight, Lock, Globe, Radio, Server, Zap } from 'lucide-react'
+import { Shield, Activity, Newspaper, ChevronRight, Lock, Globe, Radio, Server, Zap, Check, Building2, ArrowRight } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { getSummary } from '../services/api'
 import PublicNavbar from '../components/Layout/PublicNavbar'
@@ -186,6 +186,163 @@ export default function Landing() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Pricing B2B section */}
+      <section className="py-24" style={{ borderTop: '1px solid var(--border)' }}>
+        <div className="max-w-6xl mx-auto px-6">
+
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }} transition={{ duration: 0.45 }}
+            className="text-center mb-16"
+          >
+            <div className="inline-flex items-center gap-2 mb-5 px-4 py-1.5 rounded-full"
+              style={{ background: 'var(--accent-dim)', border: '1px solid var(--accent-border)' }}>
+              <Building2 className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} />
+              <span className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--accent)' }}>
+                Portal B2B · Protección para empresas
+              </span>
+            </div>
+            <h2 className="font-display font-black text-4xl md:text-5xl mb-5" style={{ color: 'var(--txt)' }}>
+              Inteligencia de amenazas<br />
+              <span style={{ color: 'var(--accent)' }}>adaptada a tu negocio</span>
+            </h2>
+            <p className="text-lg max-w-2xl mx-auto" style={{ color: 'var(--txt-2)' }}>
+              Desde startups hasta grandes corporaciones. Sin infraestructura que gestionar,
+              activo en menos de 5 minutos.
+            </p>
+          </motion.div>
+
+          {/* Plan cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-14">
+            {[
+              {
+                id: 'basico',
+                name: 'Básico',
+                price: 'Gratis',
+                priceNum: null,
+                icon: Shield,
+                color: 'rgba(148,163,184,0.9)',
+                border: 'rgba(148,163,184,0.15)',
+                bg: 'rgba(148,163,184,0.05)',
+                features: ['2 sensores activos', 'Dashboard de amenazas', 'Historial 7 días'],
+                locked: ['Mapa geográfico', 'Alertas en tiempo real', 'Informes PDF'],
+                cta: 'Empezar gratis',
+                ctaStyle: 'btn-outline',
+              },
+              {
+                id: 'profesional',
+                name: 'Profesional',
+                price: '30',
+                priceNum: '30',
+                icon: Zap,
+                color: '#FBBF24',
+                border: 'rgba(251,191,36,0.35)',
+                bg: 'rgba(251,191,36,0.06)',
+                badge: 'Más popular',
+                features: ['6 sensores activos', 'Mapa geográfico completo', 'Alertas tiempo real', 'Informes PDF mensuales', 'Historial 30 días'],
+                locked: [],
+                cta: 'Empezar 14 días gratis',
+                ctaStyle: 'btn-premium',
+              },
+              {
+                id: 'empresarial',
+                name: 'Empresarial',
+                price: '50',
+                priceNum: '50',
+                icon: Building2,
+                color: '#fb7185',
+                border: 'rgba(251,113,133,0.25)',
+                bg: 'rgba(251,113,133,0.05)',
+                features: ['Sensores ilimitados', 'API de acceso completa', 'Alertas + SMS', 'Informes personalizados', 'SLA 99.9% · Soporte 24/7', 'Account manager dedicado'],
+                locked: [],
+                cta: 'Contactar ventas',
+                ctaStyle: 'btn-outline',
+              },
+            ].map((plan, i) => {
+              const Icon = plan.icon
+              return (
+                <motion.div
+                  key={plan.id}
+                  initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }} transition={{ duration: 0.4, delay: i * 0.08 }}
+                  className="rounded-2xl p-7 flex flex-col relative"
+                  style={{
+                    background: plan.badge ? plan.bg : 'var(--surface)',
+                    border: `1px solid ${plan.badge ? plan.border : 'var(--border)'}`,
+                    boxShadow: plan.badge ? `0 0 40px ${plan.bg}` : 'none',
+                  }}
+                >
+                  {plan.badge && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                      <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full"
+                        style={{ background: '#FBBF24', color: '#000' }}>
+                        {plan.badge}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="p-2.5 rounded-xl" style={{ background: plan.bg, border: `1px solid ${plan.border}` }}>
+                      <Icon className="w-5 h-5" style={{ color: plan.color }} />
+                    </div>
+                    <span className="font-display font-bold text-lg" style={{ color: 'var(--txt)' }}>{plan.name}</span>
+                  </div>
+
+                  <div className="mb-6">
+                    {plan.priceNum
+                      ? <div className="flex items-baseline gap-1">
+                          <span className="font-display font-black text-4xl" style={{ color: plan.color }}>€{plan.price}</span>
+                          <span className="text-sm" style={{ color: 'var(--txt-3)' }}>/mes</span>
+                        </div>
+                      : <span className="font-display font-black text-4xl" style={{ color: plan.color }}>Gratis</span>
+                    }
+                  </div>
+
+                  <div className="space-y-2 flex-1 mb-7">
+                    {plan.features.map(f => (
+                      <div key={f} className="flex items-center gap-2.5">
+                        <Check className="w-3.5 h-3.5 shrink-0" style={{ color: plan.color }} />
+                        <span className="text-sm" style={{ color: 'var(--txt-1)' }}>{f}</span>
+                      </div>
+                    ))}
+                    {plan.locked.map(f => (
+                      <div key={f} className="flex items-center gap-2.5 opacity-30">
+                        <Lock className="w-3 h-3 shrink-0" style={{ color: 'var(--txt-3)' }} />
+                        <span className="text-sm" style={{ color: 'var(--txt-3)' }}>{f}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <Link to="/register"
+                    className={`w-full py-3 rounded-xl text-sm font-bold text-center flex items-center justify-center gap-2 transition-all duration-150 ${plan.ctaStyle}`}>
+                    {plan.cta}
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </motion.div>
+              )
+            })}
+          </div>
+
+          {/* Bottom CTA */}
+          <motion.div
+            initial={{ opacity: 0 }} whileInView={{ opacity: 1 }}
+            viewport={{ once: true }} transition={{ duration: 0.4, delay: 0.2 }}
+            className="text-center"
+          >
+            <p className="text-sm mb-4" style={{ color: 'var(--txt-3)' }}>
+              ¿Tienes dudas? Consulta todos los detalles y preguntas frecuentes.
+            </p>
+            <Link to="/pricing"
+              className="inline-flex items-center gap-2 text-sm font-bold transition-colors duration-150"
+              style={{ color: 'var(--accent)' }}>
+              Ver comparativa completa de planes
+              <ChevronRight className="w-4 h-4" />
+            </Link>
+          </motion.div>
         </div>
       </section>
 

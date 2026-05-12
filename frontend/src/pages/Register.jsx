@@ -21,14 +21,14 @@ const PLANS = [
   {
     id: 'profesional',
     name: 'Profesional',
-    price: '€49/mes',
+    price: '€30/mes',
     highlight: true,
     features: ['6 sensores activos', 'Dashboard completo', 'Alertas en tiempo real', 'Informes mensuales', 'Soporte prioritario'],
   },
   {
     id: 'empresarial',
     name: 'Empresarial',
-    price: '€149/mes',
+    price: '€50/mes',
     features: ['Sensores ilimitados', 'API de acceso', 'SLA 99.9%', 'Soporte dedicado 24/7', 'Onboarding personalizado'],
   },
 ]

@@ -27,7 +27,7 @@ const PLANS = [
   {
     id: 'profesional',
     name: 'Profesional',
-    price: '49',
+    price: '30',
     period: '€ / mes · facturación mensual',
     icon: Zap,
     color: '#FBBF24',
@@ -51,7 +51,7 @@ const PLANS = [
   {
     id: 'empresarial',
     name: 'Empresarial',
-    price: '149',
+    price: '50',
     period: '€ / mes · contrato anual',
     icon: Building2,
     color: '#fb7185',
