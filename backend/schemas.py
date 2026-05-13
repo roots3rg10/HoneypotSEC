@@ -188,6 +188,41 @@ class UserQuizResultRow(BaseModel):
         from_attributes = True
 
 
+# ─── Sensor ───────────────────────────────────────────────────
+class SensorTokenRequest(BaseModel):
+    client_id: int
+    name:      str = "sensor-1"
+
+
+class SensorTokenOut(BaseModel):
+    install_token: str
+    expires_in:    str
+    install_cmd:   str
+
+
+class SensorBootstrapOut(BaseModel):
+    tenant_id:    int
+    plan:         str
+    sensor_id:    int
+    ingest_token: str
+    compose:      str
+
+
+class SensorOut(BaseModel):
+    id:           int
+    tenant_id:    int
+    name:         str
+    hostname:     Optional[str]
+    ip_address:   Optional[str]
+    plan:         str
+    status:       str
+    installed_at: datetime
+    last_seen:    Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
+
 # ─── Education ────────────────────────────────────────────────
 class ArticleOut(BaseModel):
     id:           int

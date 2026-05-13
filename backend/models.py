@@ -65,6 +65,20 @@ class QuizResult(Base):
     completed_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
+class Sensor(Base):
+    __tablename__ = "sensors"
+
+    id           = Column(Integer, primary_key=True, index=True)
+    tenant_id    = Column(Integer, nullable=False, index=True)
+    name         = Column(String(100), nullable=False, default="sensor-1")
+    hostname     = Column(String(255), nullable=True)
+    ip_address   = Column(String(45),  nullable=True)
+    plan         = Column(String(20),  nullable=False)
+    status       = Column(String(20),  nullable=False, default="active")
+    installed_at = Column(DateTime(timezone=True), server_default=func.now())
+    last_seen    = Column(DateTime(timezone=True), nullable=True)
+
+
 class EducationArticle(Base):
     __tablename__ = "education_articles"
 

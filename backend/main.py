@@ -9,7 +9,7 @@ from sqlalchemy import select, text
 
 from database import get_db, engine
 from models import Base, User
-from routers import attacks, stats, education, news, quiz
+from routers import attacks, stats, education, news, quiz, sensor
 from routers import auth
 
 
@@ -61,6 +61,7 @@ app.include_router(stats.router)
 app.include_router(education.router)
 app.include_router(quiz.router)
 app.include_router(news.router)
+app.include_router(sensor.router)
 
 
 # ─── WebSocket para ataques en tiempo real ────────────────────
