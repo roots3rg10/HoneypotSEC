@@ -54,3 +54,8 @@ export const createEmployeeApi = (data) => api.post('/auth/admin/create-employee
 // Admin — clients
 export const getAdminClients  = ()   => api.get('/auth/admin/clients')
 export const getAdminClient   = (id) => api.get(`/auth/admin/clients/${id}`)
+
+// Sensor
+export const generateSensorToken = (clientId) =>
+  api.post('/sensor/generate-token', { client_id: clientId })
+export const getMySensors = () => api.get('/sensor/list/mine')

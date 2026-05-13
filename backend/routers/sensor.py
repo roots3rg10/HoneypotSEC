@@ -11,7 +11,7 @@ from database import get_db
 from dependencies import require_admin
 from models import Sensor, User
 from schemas import SensorBootstrapOut, SensorOut, SensorTokenOut, SensorTokenRequest
-from security import SECRET_KEY, ALGORITHM
+from security import SECRET_KEY, ALGORITHM, get_current_user
 
 router = APIRouter(prefix="/api/sensor", tags=["sensor"])
 
@@ -280,18 +280,11 @@ async def list_sensors(
 
 @router.get("/list/mine", response_model=list[SensorOut])
 async def list_my_sensors(
-    token: str = Query(...),
-    db:    AsyncSession = Depends(get_db),
+    db:           AsyncSession = Depends(get_db),
+    current_user: User         = Depends(get_current_user),
 ):
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM],
-                             options={"verify_exp": False})
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Token inválido")
-
-    tenant_id = payload.get("tenant_id")
     result = await db.execute(
-        select(Sensor).where(Sensor.tenant_id == tenant_id)
+        select(Sensor).where(Sensor.tenant_id == current_user.id)
         .order_by(Sensor.installed_at.desc())
     )
     return result.scalars().all()
