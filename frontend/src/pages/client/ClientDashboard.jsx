@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { ShieldAlert, Activity, Globe, Cpu, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react'
 import { getSummary, getOverview, getAttacks } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
+import { usePreviewUser } from '../../context/PreviewUserContext'
 import AttackMap from '../../components/Dashboard/AttackMap'
 import PlanGate, { hasPlan } from '../../components/PlanGate'
 
@@ -58,7 +59,9 @@ function ThreatLevel({ score }) {
 }
 
 export default function ClientDashboard() {
-  const { user } = useAuth()
+  const { user: authUser } = useAuth()
+  const previewUser = usePreviewUser()
+  const user = previewUser ?? authUser
   const plan = user?.plan || 'basico'
   const isPro = hasPlan(plan, 'profesional')
 
@@ -78,6 +81,11 @@ export default function ClientDashboard() {
 
   const sensoresLabel = plan === 'basico' ? '2 / 6' : '6 / 6'
   const sensoresSub   = plan === 'basico' ? 'Amplía con plan Pro' : 'Todos operativos'
+
+  function getFlagEmoji(code) {
+    if (!code) return '🌐'
+    return String.fromCodePoint(...code.toUpperCase().split('').map(c => 127397 + c.charCodeAt()))
+  }
 
   const severityColor = { high: '#fb7185', medium: '#FBBF24', low: '#34d399' }
   function severity(a) {
@@ -178,7 +186,7 @@ export default function ClientDashboard() {
                     {a.attack_type || 'Intento de acceso'} — {a.honeypot}
                   </p>
                   <p className="text-[10px]" style={{ color: 'var(--txt-3)' }}>
-                    {a.source_ip} · {a.country || 'Desconocido'} · {new Date(a.timestamp).toLocaleTimeString('es-ES')}
+                    {a.source_ip} · {getFlagEmoji(a.country_code)} {a.country || 'Desconocido'} · {new Date(a.timestamp).toLocaleTimeString('es-ES')}
                   </p>
                 </div>
                 <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full"

@@ -2,7 +2,6 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   LayoutDashboard,
-  GraduationCap,
   Shield,
   Activity,
   Globe,
@@ -11,15 +10,16 @@ import {
   Zap,
   ChevronRight,
   LogOut,
-  ClipboardList,
+  Users,
+  Building2,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { honeypotHex } from '../../constants/honeypotColors'
 
 const NAV_LINKS = [
-  { to: '/dashboard',         label: 'Dashboard',        icon: LayoutDashboard, adminOnly: false },
-  { to: '/education',         label: 'Academia',         icon: GraduationCap,   adminOnly: false },
-  { to: '/admin/quiz-results',label: 'Resultados quiz',  icon: ClipboardList,   adminOnly: true  },
+  { to: '/dashboard',       label: 'Dashboard', icon: LayoutDashboard, adminOnly: false },
+  { to: '/admin/clients',   label: 'Clientes',  icon: Building2,       adminOnly: true  },
+  { to: '/admin/employees', label: 'Empleados', icon: Users,           adminOnly: true  },
 ]
 
 const HONEYPOTS = [

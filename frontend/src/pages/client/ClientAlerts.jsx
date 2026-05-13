@@ -3,7 +3,13 @@ import { motion } from 'framer-motion'
 import { Bell, Filter, AlertTriangle, AlertCircle, Info } from 'lucide-react'
 import { getAttacks } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
+import { usePreviewUser } from '../../context/PreviewUserContext'
 import PlanGate, { hasPlan } from '../../components/PlanGate'
+
+function getFlagEmoji(code) {
+  if (!code) return '🌐'
+  return String.fromCodePoint(...code.toUpperCase().split('').map(c => 127397 + c.charCodeAt()))
+}
 
 const HIGH_TYPES = ['sql_injection', 'xss', 'path_traversal', 'rce', 'command_injection', 'smb_exploit', 'ics_attack']
 const MED_TYPES  = ['ssh_bruteforce', 'ftp_login', 'telnet_login', 'web_scan']
@@ -24,7 +30,9 @@ const SEV_CONFIG = {
 const FILTER_OPTIONS = ['Todas', 'Alta', 'Media', 'Baja']
 
 export default function ClientAlerts() {
-  const { user } = useAuth()
+  const { user: authUser } = useAuth()
+  const previewUser = usePreviewUser()
+  const user = previewUser ?? authUser
   const plan  = user?.plan || 'basico'
   const isPro = hasPlan(plan, 'profesional')
 
@@ -129,7 +137,7 @@ export default function ClientAlerts() {
                   </div>
                   <div className="flex flex-wrap gap-x-3 gap-y-0.5">
                     <span className="text-xs" style={{ color: 'var(--txt-3)' }}>IP: {a.source_ip}</span>
-                    {a.country && <span className="text-xs" style={{ color: 'var(--txt-3)' }}>País: {a.country}</span>}
+                    {a.country && <span className="text-xs" style={{ color: 'var(--txt-3)' }}>{getFlagEmoji(a.country_code)} {a.country}</span>}
                     {a.dest_port && <span className="text-xs" style={{ color: 'var(--txt-3)' }}>Puerto: {a.dest_port}</span>}
                   </div>
                 </div>

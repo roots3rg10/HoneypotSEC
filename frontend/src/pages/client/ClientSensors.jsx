@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Shield, Globe, Cpu, Activity, Zap, Layers, TrendingUp, CheckCircle2, Lock } from 'lucide-react'
 import { getHoneypots } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
+import { usePreviewUser } from '../../context/PreviewUserContext'
 import { hasPlan } from '../../components/PlanGate'
 import { Link } from 'react-router-dom'
 
@@ -22,7 +23,9 @@ const ACTIVE_BY_PLAN = {
 }
 
 export default function ClientSensors() {
-  const { user } = useAuth()
+  const { user: authUser } = useAuth()
+  const previewUser = usePreviewUser()
+  const user = previewUser ?? authUser
   const plan = user?.plan || 'basico'
   const activeSensors = ACTIVE_BY_PLAN[plan] || ACTIVE_BY_PLAN.basico
   const isPro = hasPlan(plan, 'profesional')

@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { Building2, User, Mail, Shield, Check, Key, Headphones, BadgeCheck } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import { usePreviewUser } from '../../context/PreviewUserContext'
 import { hasPlan } from '../../components/PlanGate'
 
 const PLAN_DETAILS = {
@@ -24,7 +25,9 @@ function InfoRow({ icon: Icon, label, value }) {
 }
 
 export default function ClientAccount() {
-  const { user } = useAuth()
+  const { user: authUser } = useAuth()
+  const previewUser = usePreviewUser()
+  const user = previewUser ?? authUser
   const plan       = user?.plan || 'basico'
   const planData   = PLAN_DETAILS[plan] || PLAN_DETAILS.basico
   const isEnterprise = hasPlan(plan, 'empresarial')

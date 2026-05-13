@@ -4,7 +4,7 @@ from sqlalchemy import select
 
 from database import get_db
 from models import QuizQuestion, QuizResult, User
-from schemas import QuizQuestionOut, QuizSubmit, QuizResultOut, AdminQuizResultRow
+from schemas import QuizQuestionOut, QuizSubmit, QuizResultOut, AdminQuizResultRow, UserQuizResultRow
 from security import get_current_user
 from dependencies import require_admin
 
@@ -15,7 +15,6 @@ router = APIRouter(prefix="/api/education", tags=["quiz"])
 async def get_quiz(
     slug: str,
     db:   AsyncSession = Depends(get_db),
-    _:    User = Depends(get_current_user),
 ):
     result = await db.execute(
         select(QuizQuestion)
@@ -75,6 +74,19 @@ async def submit_quiz(
     await db.commit()
 
     return QuizResultOut(score=score, max_score=max_score, passed=passed, details=details)
+
+
+@router.get("/quiz-results/me", response_model=list[UserQuizResultRow])
+async def my_quiz_results(
+    db:           AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    rows = await db.execute(
+        select(QuizResult)
+        .where(QuizResult.user_id == current_user.id)
+        .order_by(QuizResult.completed_at.desc())
+    )
+    return rows.scalars().all()
 
 
 @router.get("/quiz-results/all", response_model=list[AdminQuizResultRow])

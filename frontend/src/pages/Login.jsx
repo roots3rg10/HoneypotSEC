@@ -21,7 +21,9 @@ export default function Login() {
     setLoading(true)
     try {
       const me = await login(form.username, form.password)
-      navigate(me.role === 'client' ? '/client/dashboard' : '/dashboard', { replace: true })
+      if (me.role === 'client')   navigate('/client/dashboard', { replace: true })
+      else if (me.role === 'employee') navigate('/academy',    { replace: true })
+      else                             navigate('/dashboard',   { replace: true })
     } catch (err) {
       const msg = err?.response?.data?.detail || 'Error de conexión. Inténtalo de nuevo.'
       setError(msg)
@@ -44,7 +46,7 @@ export default function Login() {
             style={{ border: '1px solid rgba(255,255,255,0.08)' }} />
           <h1 className="font-display font-black text-2xl text-white tracking-tight">HONEYPOT</h1>
           <p className="font-bold text-xs tracking-[0.2em] mt-1" style={{ color: '#FBBF24' }}>CYBERSECURITY</p>
-          <p className="text-sm mt-3" style={{ color: 'rgba(255,255,255,0.3)' }}>Acceso al panel de control</p>
+          <p className="text-sm mt-3" style={{ color: 'rgba(255,255,255,0.3)' }}>Accede a tu cuenta</p>
         </div>
 
         {/* Card */}

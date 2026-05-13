@@ -4,6 +4,11 @@ import { motion } from 'framer-motion'
 import { getAttack } from '../services/api'
 import { ChevronLeft, Terminal, Database, Fingerprint, MapPin, ShieldAlert, Hash, Clock, Lock } from 'lucide-react'
 
+function getFlagEmoji(code) {
+  if (!code) return '🌐'
+  return String.fromCodePoint(...code.toUpperCase().split('').map(c => 127397 + c.charCodeAt()))
+}
+
 export default function AttackDetail() {
   const { id }     = useParams()
   const [attack, setAttack] = useState(null)
@@ -28,7 +33,7 @@ export default function AttackDetail() {
     { label: 'Puerto destino',           value: attack.dest_port ?? '—',                                   color: 'rgba(255,255,255,0.8)', icon: Database,   mono: true },
     { label: 'Protocolo',                value: attack.protocol ?? '—',                                    color: 'rgba(255,255,255,0.6)', icon: Terminal,   mono: true },
     { label: 'Clasificación',            value: attack.attack_type ?? 'Sin clasificar',                    color: '#fb7185',               icon: Fingerprint },
-    { label: 'Origen geográfico',        value: `${attack.country || 'Desconocido'} (${attack.city || '—'})`, color: 'rgba(255,255,255,0.7)', icon: MapPin },
+    { label: 'Origen geográfico',        value: `${getFlagEmoji(attack.country_code)} ${attack.country || 'Desconocido'} (${attack.city || '—'})`, color: 'rgba(255,255,255,0.7)', icon: MapPin },
     { label: 'Intento de autenticación', value: attack.username ? `${attack.username} : ${attack.password || '****'}` : '—', color: 'rgba(251,191,36,0.7)', icon: Lock, mono: true },
     { label: 'Timestamp',                value: new Date(attack.timestamp).toLocaleString('es-ES'),        color: 'rgba(255,255,255,0.4)', icon: Clock,      mono: true },
   ]

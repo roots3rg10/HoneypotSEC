@@ -3,10 +3,13 @@ import { motion } from 'framer-motion'
 import { FileText, Printer, TrendingUp, Shield, Globe, Cpu } from 'lucide-react'
 import { getSummary, getOverview, getHoneypots } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
+import { usePreviewUser } from '../../context/PreviewUserContext'
 import PlanGate, { hasPlan } from '../../components/PlanGate'
 
 export default function ClientReports() {
-  const { user } = useAuth()
+  const { user: authUser } = useAuth()
+  const previewUser = usePreviewUser()
+  const user = previewUser ?? authUser
   const plan  = user?.plan || 'basico'
   const isPro = hasPlan(plan, 'profesional')
 

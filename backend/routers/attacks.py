@@ -5,10 +5,22 @@ from typing import Optional
 
 from database import get_db
 from models import Attack, User
-from schemas import AttackOut, AttackList
+from schemas import AttackOut, AttackList, PublicAttackOut
 from dependencies import require_admin
 
 router = APIRouter(prefix="/api/attacks", tags=["attacks"])
+
+
+@router.get("/public", response_model=list[PublicAttackOut])
+async def list_attacks_public(
+    limit: int = Query(25, ge=1, le=50),
+    db:    AsyncSession = Depends(get_db),
+):
+    """Recent attacks for public showcase — no auth, no sensitive fields."""
+    items = (await db.execute(
+        select(Attack).order_by(desc(Attack.timestamp)).limit(limit)
+    )).scalars().all()
+    return items
 
 
 @router.get("", response_model=AttackList)

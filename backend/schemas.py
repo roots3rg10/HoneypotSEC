@@ -43,7 +43,27 @@ class AdminCreateClientIn(BaseModel):
     plan:           str = "profesional"
 
 
+class AdminCreateEmployeeIn(BaseModel):
+    username: str
+    email:    EmailStr
+    password: str
+
+
 # ─── Attacks ──────────────────────────────────────────────────
+class PublicAttackOut(BaseModel):
+    id:           int
+    timestamp:    datetime
+    honeypot:     str
+    dest_port:    Optional[int]
+    protocol:     Optional[str]
+    country:      Optional[str]
+    country_code: Optional[str]
+    attack_type:  Optional[str]
+
+    class Config:
+        from_attributes = True
+
+
 class AttackOut(BaseModel):
     id:           int
     timestamp:    datetime
@@ -148,6 +168,17 @@ class AdminQuizResultRow(BaseModel):
     id:           int
     user_id:      int
     username:     str
+    article_slug: str
+    score:        int
+    max_score:    int
+    completed_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class UserQuizResultRow(BaseModel):
+    id:           int
     article_slug: str
     score:        int
     max_score:    int

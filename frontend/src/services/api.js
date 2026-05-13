@@ -19,8 +19,9 @@ export const logoutApi   = () => api.post('/auth/logout')
 export const registerApi = (data) => api.post('/auth/register', data)
 
 // Attacks
-export const getAttacks  = (params) => api.get('/attacks', { params })
-export const getAttack   = (id)     => api.get(`/attacks/${id}`)
+export const getAttacks       = (params) => api.get('/attacks', { params })
+export const getAttack        = (id)     => api.get(`/attacks/${id}`)
+export const getPublicAttacks = (limit = 25) => api.get('/attacks/public', { params: { limit } })
 
 // Stats
 export const getSummary  = ()       => api.get('/stats/summary')
@@ -43,4 +44,13 @@ export const getNews = () => api.get('/news')
 // Quiz
 export const getQuiz       = (slug)    => api.get(`/education/articles/${slug}/quiz`)
 export const submitQuiz    = (slug, answers) => api.post(`/education/articles/${slug}/quiz`, { answers })
-export const getQuizResults = ()        => api.get('/education/quiz-results/all')
+export const getQuizResults   = ()        => api.get('/education/quiz-results/all')
+export const getMyQuizResults = ()        => api.get('/education/quiz-results/me')
+
+// Admin — employees
+export const getEmployees      = ()     => api.get('/auth/admin/employees')
+export const createEmployeeApi = (data) => api.post('/auth/admin/create-employee', data)
+
+// Admin — clients
+export const getAdminClients  = ()   => api.get('/auth/admin/clients')
+export const getAdminClient   = (id) => api.get(`/auth/admin/clients/${id}`)
