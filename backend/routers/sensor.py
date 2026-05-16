@@ -298,15 +298,26 @@ async def bootstrap(
     if not client or client.role != "client":
         raise invalid
 
-    # Registrar sensor en BD
-    sensor = Sensor(
-        tenant_id  = tenant_id,
-        hostname   = hostname[:255],
-        ip_address = ip[:45],
-        plan       = plan,
-        status     = "active",
-    )
-    db.add(sensor)
+    # Upsert: si ya existe un sensor con ese hostname para este tenant, reutilizarlo
+    existing = (await db.execute(
+        select(Sensor).where(Sensor.tenant_id == tenant_id, Sensor.hostname == hostname[:255])
+    )).scalar_one_or_none()
+
+    if existing:
+        existing.ip_address = ip[:45]
+        existing.plan       = plan
+        existing.status     = "active"
+        sensor = existing
+    else:
+        sensor = Sensor(
+            tenant_id  = tenant_id,
+            hostname   = hostname[:255],
+            ip_address = ip[:45],
+            plan       = plan,
+            status     = "active",
+        )
+        db.add(sensor)
+
     await db.commit()
     await db.refresh(sensor)
 
