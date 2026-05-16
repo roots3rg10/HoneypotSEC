@@ -87,6 +87,7 @@ class AttackOut(BaseModel):
     password:     Optional[str]
     payload:      Optional[str]
     session_id:   Optional[str]
+    raw_data:     Optional[dict] = None
 
     class Config:
         from_attributes = True

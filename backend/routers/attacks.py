@@ -62,6 +62,7 @@ async def list_my_attacks(
     limit:     int           = Query(50, ge=1, le=200),
     tenant_id: Optional[int] = None,
     days:      Optional[int] = Query(None, ge=1, le=365),
+    honeypot:  Optional[str] = None,
     db:        AsyncSession  = Depends(get_db),
     current_user: User       = Depends(get_current_user),
 ):
@@ -85,6 +86,8 @@ async def list_my_attacks(
         return AttackList(total=0, page=page, limit=limit, items=[])
 
     base   = (Attack.sensor_id.in_(sensor_ids), Attack.timestamp >= since)
+    if honeypot:
+        base = (*base, Attack.honeypot == honeypot)
     offset = (page - 1) * limit
     total  = (await db.execute(select(func.count(Attack.id)).where(*base))).scalar_one()
     items  = (await db.execute(

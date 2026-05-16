@@ -274,6 +274,53 @@ async def client_summary(
     }
 
 
+@router.get("/client/honeypots")
+async def client_honeypot_stats(
+    tenant_id:    Optional[int] = None,
+    days:         int           = Query(7, ge=1, le=365),
+    db:           AsyncSession  = Depends(get_db),
+    current_user: User          = Depends(get_current_user),
+):
+    """Per-honeypot breakdown for the client portal."""
+    effective_id = _resolve_tenant(current_user, tenant_id)
+    sensor_ids   = await _tenant_sensor_ids(db, effective_id)
+    since        = datetime.now(timezone.utc) - timedelta(days=days)
+
+    if not sensor_ids:
+        return []
+
+    base = (Attack.sensor_id.in_(sensor_ids), Attack.timestamp >= since)
+
+    count_rows = (await db.execute(
+        select(Attack.honeypot, func.count(Attack.id).label("c"))
+        .where(*base)
+        .group_by(Attack.honeypot)
+        .order_by(desc("c"))
+    )).all()
+
+    result = []
+    for hp, count in count_rows:
+        top_type_row = (await db.execute(
+            select(Attack.attack_type, func.count(Attack.id).label("c"))
+            .where(*base, Attack.honeypot == hp, Attack.attack_type.isnot(None))
+            .group_by(Attack.attack_type)
+            .order_by(desc("c"))
+            .limit(1)
+        )).first()
+        unique_ips = (await db.execute(
+            select(func.count(distinct(Attack.source_ip)))
+            .where(*base, Attack.honeypot == hp)
+        )).scalar_one()
+        result.append({
+            "honeypot":        hp,
+            "count":           count,
+            "unique_ips":      unique_ips,
+            "top_attack_type": top_type_row[0] if top_type_row else None,
+        })
+
+    return result
+
+
 @router.get("/client/overview")
 async def client_overview(
     tenant_id:    Optional[int] = None,
