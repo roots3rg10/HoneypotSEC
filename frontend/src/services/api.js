@@ -35,7 +35,7 @@ export const getTopPorts = ()       => api.get('/stats/top-ports')
 export const getOverview = ()       => api.get('/stats/overview')
 
 // Stats — filtrados por tenant (portal cliente)
-export const getClientSummary  = (tenantId) => api.get('/stats/client/summary',  { params: { tenant_id: tenantId } })
+export const getClientSummary  = (tenantId, days = 7) => api.get('/stats/client/summary',  { params: { tenant_id: tenantId, days } })
 export const getClientOverview = (tenantId) => api.get('/stats/client/overview', { params: { tenant_id: tenantId } })
 export const getMyAttacks      = (params)   => api.get('/attacks/mine',           { params })
 

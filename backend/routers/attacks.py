@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc
 from typing import Optional
+from datetime import datetime, timezone, timedelta
 
 from database import get_db
 from models import Attack, User, Sensor
@@ -10,6 +11,8 @@ from dependencies import require_admin
 from security import get_current_user
 
 router = APIRouter(prefix="/api/attacks", tags=["attacks"])
+
+PLAN_RETENTION_DAYS = {"basico": 30, "profesional": 90, "empresarial": 180}
 
 
 @router.get("/public", response_model=list[PublicAttackOut])
@@ -55,16 +58,24 @@ async def list_attacks(
 
 @router.get("/mine", response_model=AttackList)
 async def list_my_attacks(
-    page:      int          = Query(1,  ge=1),
-    limit:     int          = Query(50, ge=1, le=200),
+    page:      int           = Query(1,  ge=1),
+    limit:     int           = Query(50, ge=1, le=200),
     tenant_id: Optional[int] = None,
-    db:        AsyncSession = Depends(get_db),
-    current_user: User      = Depends(get_current_user),
+    days:      Optional[int] = Query(None, ge=1, le=365),
+    db:        AsyncSession  = Depends(get_db),
+    current_user: User       = Depends(get_current_user),
 ):
     if current_user.role in ("admin", "employee") and tenant_id is not None:
         effective_id = tenant_id
+        client = await db.get(User, effective_id)
+        plan   = client.plan if client else "basico"
     else:
         effective_id = current_user.id
+        plan         = current_user.plan or "basico"
+
+    max_days = PLAN_RETENTION_DAYS.get(plan, 30)
+    window   = min(days, max_days) if days is not None else max_days
+    since    = datetime.now(timezone.utc) - timedelta(days=window)
 
     sensor_ids = list((await db.execute(
         select(Sensor.id).where(Sensor.tenant_id == effective_id)
@@ -73,11 +84,11 @@ async def list_my_attacks(
     if not sensor_ids:
         return AttackList(total=0, page=page, limit=limit, items=[])
 
-    base   = Attack.sensor_id.in_(sensor_ids)
+    base   = (Attack.sensor_id.in_(sensor_ids), Attack.timestamp >= since)
     offset = (page - 1) * limit
-    total  = (await db.execute(select(func.count(Attack.id)).where(base))).scalar_one()
+    total  = (await db.execute(select(func.count(Attack.id)).where(*base))).scalar_one()
     items  = (await db.execute(
-        select(Attack).where(base).order_by(desc(Attack.timestamp)).offset(offset).limit(limit)
+        select(Attack).where(*base).order_by(desc(Attack.timestamp)).offset(offset).limit(limit)
     )).scalars().all()
     return AttackList(total=total, page=page, limit=limit, items=items)
 

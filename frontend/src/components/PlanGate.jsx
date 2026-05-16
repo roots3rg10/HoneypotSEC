@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Lock, ArrowRight } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { usePreviewUser } from '../context/PreviewUserContext'
 
 const PLAN_ORDER = { freemium: 0, basico: 1, profesional: 2, empresarial: 3 }
 const PLAN_LABEL = { basico: 'Básico', profesional: 'Profesional', empresarial: 'Empresarial' }
@@ -12,7 +13,9 @@ export function hasPlan(userPlan, required) {
 }
 
 export default function PlanGate({ requires, children, title, description, compact = false }) {
-  const { user } = useAuth()
+  const { user: authUser } = useAuth()
+  const previewUser = usePreviewUser()
+  const user = previewUser ?? authUser
   if (hasPlan(user?.plan, requires)) return children
 
   const color = PLAN_COLOR[requires]

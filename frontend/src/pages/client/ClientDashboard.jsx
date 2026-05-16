@@ -212,16 +212,16 @@ export default function ClientDashboard() {
     setLoading(true)
 
     Promise.all([
-      getClientSummary(tenantId).then(r => setSummary(r.data)).catch(() => {}),
+      getClientSummary(tenantId, 7).then(r => setSummary(r.data)).catch(() => {}),
       getClientOverview(tenantId).then(r => setOverview(r.data)).catch(() => {}),
-      getMyAttacks({ limit: isPro ? 8 : 3, tenant_id: tenantId })
+      getMyAttacks({ limit: isPro ? 8 : 3, tenant_id: tenantId, days: 7 })
         .then(r => setAlerts(r.data?.items || [])).catch(() => {}),
     ]).finally(() => { setLoading(false); markUpdated() })
 
     // Polling cada 30 s para actualizar en tiempo real
     const interval = setInterval(() => {
-      getClientSummary(tenantId).then(r => setSummary(r.data)).catch(() => {})
-      getMyAttacks({ limit: isPro ? 8 : 3, tenant_id: tenantId })
+      getClientSummary(tenantId, 7).then(r => setSummary(r.data)).catch(() => {})
+      getMyAttacks({ limit: isPro ? 8 : 3, tenant_id: tenantId, days: 7 })
         .then(r => setAlerts(r.data?.items || [])).catch(() => {})
       markUpdated()
     }, 30000)
@@ -255,10 +255,9 @@ export default function ClientDashboard() {
   }
 
   // ── Con sensores: datos reales ───────────────────────────
-  const attacks24h  = summary?.attacks_24h  ?? 0
-  const totalIPs    = summary?.unique_ips   ?? 0
-  const sensorCount = summary?.sensor_count ?? 0
-  // Score de amenaza: 0 ataques → 0 (verde), crece con la actividad (max 100)
+  const attacks24h  = summary?.attacks_period ?? 0
+  const totalIPs    = summary?.unique_ips     ?? 0
+  const sensorCount = summary?.sensor_count   ?? 0
   const score       = Math.min(100, Math.floor(attacks24h * 2))
 
   return (
@@ -290,7 +289,7 @@ export default function ClientDashboard() {
         <span className="h-3 w-px hidden sm:block" style={{ background: 'rgba(255,255,255,0.1)' }} />
         <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.45)' }}>
           Ventana de análisis:{' '}
-          <strong style={{ color: '#FBBF24' }}>últimas 24 horas</strong>
+          <strong style={{ color: '#FBBF24' }}>últimos 7 días</strong>
         </span>
         <span className="h-3 w-px hidden sm:block" style={{ background: 'rgba(255,255,255,0.1)' }} />
         <span className="flex items-center gap-1 text-[11px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
@@ -313,8 +312,8 @@ export default function ClientDashboard() {
         <KpiCard icon={ShieldAlert} label="Nivel de amenaza"
           value={attacks24h === 0 ? 'Ninguno' : score >= 70 ? 'Alto' : score >= 40 ? 'Medio' : 'Bajo'}
           color={attacks24h === 0 ? '#34d399' : score >= 70 ? '#fb7185' : score >= 40 ? '#FBBF24' : '#34d399'} delay={0} />
-        <KpiCard icon={Activity} label="Ataques (24h)" value={attacks24h}
-          sub="últimas 24 horas" color="#FBBF24" delay={0.05} />
+        <KpiCard icon={Activity} label="Ataques (7d)" value={attacks24h}
+          sub="últimos 7 días" color="#FBBF24" delay={0.05} />
         <KpiCard icon={Globe} label="IPs únicas" value={totalIPs}
           sub="en total" color="#60a5fa" delay={0.1} />
         <KpiCard icon={Cpu} label="Sensores activos" value={sensorCount}
@@ -348,12 +347,12 @@ export default function ClientDashboard() {
             <span className="font-display font-bold text-sm" style={{ color: 'var(--txt)' }}>Score de seguridad</span>
             <span className="ml-auto text-[10px] font-black px-2 py-0.5 rounded-full"
               style={{ background: 'rgba(251,191,36,0.1)', color: '#FBBF24', border: '1px solid rgba(251,191,36,0.2)' }}>
-              24H
+              7D
             </span>
           </div>
           <ThreatLevel score={score} noAttacks={attacks24h === 0} />
           <p className="text-[11px] text-center mt-3" style={{ color: 'var(--txt-3)' }}>
-            Basado en ataques de las últimas 24 horas
+            Basado en ataques de los últimos 7 días
           </p>
         </motion.div>
       </div>
@@ -369,7 +368,7 @@ export default function ClientDashboard() {
             <span className="font-display font-bold text-sm" style={{ color: 'var(--txt)' }}>Alertas recientes</span>
             <span className="text-[10px] font-black px-2 py-0.5 rounded-full"
               style={{ background: 'rgba(251,191,36,0.08)', color: 'rgba(251,191,36,0.7)', border: '1px solid rgba(251,191,36,0.15)' }}>
-              24H
+              7D
             </span>
           </div>
           {!isPro && (

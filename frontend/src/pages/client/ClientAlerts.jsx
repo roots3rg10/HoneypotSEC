@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Bell, Filter, AlertTriangle, AlertCircle, Info } from 'lucide-react'
-import { getAttacks } from '../../services/api'
+import { getMyAttacks } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import { usePreviewUser } from '../../context/PreviewUserContext'
 import PlanGate, { hasPlan } from '../../components/PlanGate'
@@ -41,11 +41,11 @@ export default function ClientAlerts() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    getAttacks({ limit: 50, order: 'desc' })
+    getMyAttacks({ limit: 200, days: 7, tenant_id: user?.id })
       .then(r => setAttacks(r.data?.items || []))
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [])
+  }, [user?.id])
 
   const allWithSev = attacks.map(a => ({ ...a, _sev: getSeverity(a) }))
   const filtered   = allWithSev.filter(a => filter === 'Todas' || SEV_CONFIG[a._sev]?.label === filter)
@@ -59,7 +59,7 @@ export default function ClientAlerts() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="font-display font-black text-2xl" style={{ color: 'var(--txt)' }}>Alertas</h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--txt-2)' }}>Actividad de amenazas detectada por tus sensores</p>
+          <p className="text-sm mt-1" style={{ color: 'var(--txt-2)' }}>Actividad de los últimos 7 días detectada por tus sensores</p>
         </div>
       </div>
 

@@ -1,5 +1,5 @@
 from typing import Optional
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc, text, distinct
 from datetime import datetime, timezone, timedelta
@@ -225,45 +225,48 @@ def _resolve_tenant(current_user: User, tenant_id: Optional[int]) -> int:
 @router.get("/client/summary")
 async def client_summary(
     tenant_id:    Optional[int] = None,
+    days:         int           = Query(7, ge=1, le=365),
     db:           AsyncSession  = Depends(get_db),
     current_user: User          = Depends(get_current_user),
 ):
     effective_id  = _resolve_tenant(current_user, tenant_id)
     sensor_ids    = await _tenant_sensor_ids(db, effective_id)
-    last_24h      = datetime.now(timezone.utc) - timedelta(hours=24)
+    since         = datetime.now(timezone.utc) - timedelta(days=days)
 
     if not sensor_ids:
-        return {"total_attacks": 0, "unique_ips": 0, "attacks_24h": 0,
-                "top_honeypot": None, "top_country": None, "top_attack_type": None,
-                "sensor_count": 0}
+        return {"total_attacks": 0, "unique_ips": 0, "attacks_period": 0,
+                "period_days": days, "top_honeypot": None, "top_country": None,
+                "top_attack_type": None, "sensor_count": 0}
 
     base = Attack.sensor_id.in_(sensor_ids)
 
-    total       = (await db.execute(select(func.count(Attack.id)).where(base))).scalar_one()
-    unique_ips  = (await db.execute(select(func.count(distinct(Attack.source_ip))).where(base))).scalar_one()
-    today_count = (await db.execute(
-        select(func.count(Attack.id)).where(base, Attack.timestamp >= last_24h)
+    total         = (await db.execute(select(func.count(Attack.id)).where(base))).scalar_one()
+    unique_ips    = (await db.execute(select(func.count(distinct(Attack.source_ip))).where(base))).scalar_one()
+    period_count  = (await db.execute(
+        select(func.count(Attack.id)).where(base, Attack.timestamp >= since)
     )).scalar_one()
 
     top_hp      = (await db.execute(
         select(Attack.honeypot, func.count(Attack.id).label("c"))
-        .where(base).group_by(Attack.honeypot).order_by(desc("c")).limit(1)
+        .where(base, Attack.timestamp >= since)
+        .group_by(Attack.honeypot).order_by(desc("c")).limit(1)
     )).first()
     top_country = (await db.execute(
         select(Attack.country, func.count(Attack.id).label("c"))
-        .where(base, Attack.country.isnot(None))
+        .where(base, Attack.country.isnot(None), Attack.timestamp >= since)
         .group_by(Attack.country).order_by(desc("c")).limit(1)
     )).first()
     top_type    = (await db.execute(
         select(Attack.attack_type, func.count(Attack.id).label("c"))
-        .where(base, Attack.attack_type.isnot(None))
+        .where(base, Attack.attack_type.isnot(None), Attack.timestamp >= since)
         .group_by(Attack.attack_type).order_by(desc("c")).limit(1)
     )).first()
 
     return {
         "total_attacks":   total,
         "unique_ips":      unique_ips,
-        "attacks_24h":     today_count,
+        "attacks_period":  period_count,
+        "period_days":     days,
         "top_honeypot":    top_hp[0]      if top_hp      else None,
         "top_country":     top_country[0] if top_country else None,
         "top_attack_type": top_type[0]    if top_type    else None,

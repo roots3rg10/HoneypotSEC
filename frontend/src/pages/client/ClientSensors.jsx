@@ -3,12 +3,21 @@ import { motion } from 'framer-motion'
 import {
   Shield, Globe, Cpu, Activity, Zap, Layers, Lock,
   Terminal, Copy, Check, CheckCircle2, TrendingUp, Wifi, WifiOff,
+  History, ChevronLeft, ChevronRight, Database,
 } from 'lucide-react'
-import { getHoneypots, getMySensors } from '../../services/api'
+import { getHoneypots, getMySensors, getMyAttacks } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import { usePreviewUser } from '../../context/PreviewUserContext'
 import { hasPlan } from '../../components/PlanGate'
 import { Link } from 'react-router-dom'
+
+const PLAN_RETENTION = { basico: 30, profesional: 90, empresarial: 180 }
+const PLAN_RETENTION_LABEL = { basico: '1 mes', profesional: '3 meses', empresarial: '6 meses' }
+
+function getFlagEmoji(code) {
+  if (!code) return '🌐'
+  return String.fromCodePoint(...code.toUpperCase().split('').map(c => 127397 + c.charCodeAt()))
+}
 
 const SENSOR_META = {
   cowrie:    { label: 'Cowrie',    desc: 'SSH / Telnet',   icon: Shield,   color: '#e2e8f0', port: '2222 / 2323' },
@@ -52,6 +61,11 @@ export default function ClientSensors() {
   const [data,      setData]      = useState([])
   const [sensors,   setSensors]   = useState([])
   const [copied,    setCopied]    = useState(false)
+  const [history,   setHistory]   = useState([])
+  const [histTotal, setHistTotal] = useState(0)
+  const [histPage,  setHistPage]  = useState(1)
+  const [histLoad,  setHistLoad]  = useState(true)
+  const HIST_LIMIT = 20
 
   const INSTALL_CMD = `curl -s https://honeypotsec.duckdns.org/install | sudo bash -s -- --token <TU_TOKEN>`
 
@@ -59,6 +73,15 @@ export default function ClientSensors() {
     getHoneypots().then(r => setData(r.data || [])).catch(() => {})
     getMySensors().then(r => setSensors(r.data || [])).catch(() => {})
   }, [])
+
+  useEffect(() => {
+    if (!user?.id) return
+    setHistLoad(true)
+    getMyAttacks({ page: histPage, limit: HIST_LIMIT, tenant_id: user.id })
+      .then(r => { setHistory(r.data?.items || []); setHistTotal(r.data?.total || 0) })
+      .catch(() => {})
+      .finally(() => setHistLoad(false))
+  }, [user?.id, histPage])
 
   function copyCmd() {
     navigator.clipboard.writeText(INSTALL_CMD).then(() => {
@@ -222,6 +245,90 @@ export default function ClientSensors() {
           </div>
         </div>
       )}
+
+      {/* ── Historial completo de ataques ───────────────────────── */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <History className="w-4 h-4 text-amber-400" />
+            <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>
+              Historial completo de ataques
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 text-[10px] font-black px-3 py-1.5 rounded-full"
+              style={{ background: 'rgba(96,165,250,0.08)', color: '#60a5fa', border: '1px solid rgba(96,165,250,0.2)' }}>
+              <Database className="w-3 h-3" />
+              Retención: {PLAN_RETENTION_LABEL[plan] || '1 mes'}
+            </div>
+            <span className="text-[10px]" style={{ color: 'var(--txt-3)' }}>{histTotal} registros</span>
+          </div>
+        </div>
+
+        <div className="rounded-2xl overflow-hidden"
+          style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+          {histLoad ? (
+            <div className="flex justify-center py-10">
+              <div className="w-5 h-5 rounded-full animate-spin"
+                style={{ border: '2px solid rgba(251,191,36,0.15)', borderTopColor: '#FBBF24' }} />
+            </div>
+          ) : history.length === 0 ? (
+            <p className="px-5 py-8 text-sm text-center" style={{ color: 'var(--txt-3)' }}>
+              Sin ataques registrados en el período de retención
+            </p>
+          ) : (
+            <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+              {history.map((a, i) => (
+                <motion.div key={a.id}
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.015 }}
+                  className="px-5 py-3 flex items-center gap-4">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold truncate" style={{ color: 'var(--txt-1)' }}>
+                      {a.attack_type || 'Intento de acceso'}
+                      <span className="mx-1.5 font-normal" style={{ color: 'var(--txt-3)' }}>·</span>
+                      <span style={{ color: 'var(--txt-2)' }}>{a.honeypot}</span>
+                    </p>
+                    <p className="text-[10px] mt-0.5" style={{ color: 'var(--txt-3)' }}>
+                      {a.source_ip}
+                      {a.country && <span> · {getFlagEmoji(a.country_code)} {a.country}</span>}
+                      {a.dest_port && <span> · Puerto {a.dest_port}</span>}
+                    </p>
+                  </div>
+                  <span className="text-[10px] shrink-0" style={{ color: 'var(--txt-3)' }}>
+                    {new Date(a.timestamp).toLocaleString('es-ES', {
+                      day: '2-digit', month: '2-digit', year: '2-digit',
+                      hour: '2-digit', minute: '2-digit',
+                    })}
+                  </span>
+                </motion.div>
+              ))}
+            </div>
+          )}
+
+          {/* Paginación */}
+          {histTotal > HIST_LIMIT && (
+            <div className="px-5 py-3 border-t flex items-center justify-between"
+              style={{ borderColor: 'var(--border)' }}>
+              <span className="text-xs" style={{ color: 'var(--txt-3)' }}>
+                Página {histPage} de {Math.ceil(histTotal / HIST_LIMIT)}
+              </span>
+              <div className="flex gap-2">
+                <button onClick={() => setHistPage(p => Math.max(1, p - 1))} disabled={histPage === 1}
+                  className="p-1.5 rounded-lg transition-all disabled:opacity-30"
+                  style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                  <ChevronLeft className="w-3.5 h-3.5" style={{ color: 'var(--txt-2)' }} />
+                </button>
+                <button onClick={() => setHistPage(p => p + 1)}
+                  disabled={histPage >= Math.ceil(histTotal / HIST_LIMIT)}
+                  className="p-1.5 rounded-lg transition-all disabled:opacity-30"
+                  style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                  <ChevronRight className="w-3.5 h-3.5" style={{ color: 'var(--txt-2)' }} />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* ── Estado de honeypots por plan ────────────────────────── */}
       <div>
