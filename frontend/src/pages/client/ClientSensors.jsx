@@ -30,6 +30,7 @@ const SENSOR_META = {
 }
 
 const ACTIVE_BY_PLAN = {
+  freemium:    [],
   basico:      ['cowrie', 'dionaea'],
   profesional: Object.keys(SENSOR_META),
   empresarial: Object.keys(SENSOR_META),
@@ -253,7 +254,7 @@ function TabExportar({ hpKey, userId, retentionDays, color }) {
   async function handleExport() {
     setLoading(true)
     try {
-      const r = await getMyAttacks({ honeypot: hpKey, tenant_id: userId, limit: 1000, days: retentionDays })
+      const r = await getMyAttacks({ honeypot: hpKey, tenant_id: userId, limit: 500, days: retentionDays })
       downloadCSV(r.data?.items || [], `${hpKey}_attacks_${new Date().toISOString().slice(0,10)}.csv`)
     } catch {}
     setLoading(false)
@@ -525,13 +526,16 @@ function TabHoneyd({ attacks }) {
       </div>
       <div className="space-y-2">
         <p className="text-[10px] uppercase font-bold tracking-widest" style={{ color: 'var(--txt-3)' }}>Servicios/puertos probados</p>
-        {ports.map(([p, count]) => (
-          <div key={p} className="flex items-center justify-between px-3 py-2 rounded-lg text-xs"
-            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)' }}>
-            <span style={{ color: 'var(--txt-2)' }}>Puerto {p}</span>
-            <span className="font-bold" style={{ color: SENSOR_META.honeyd.color }}>{count}</span>
-          </div>
-        ))}
+        {ports.length === 0
+          ? <p className="text-xs" style={{ color: 'var(--txt-3)' }}>Sin datos</p>
+          : ports.map(([p, count]) => (
+            <div key={p} className="flex items-center justify-between px-3 py-2 rounded-lg text-xs"
+              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)' }}>
+              <span style={{ color: 'var(--txt-2)' }}>Puerto {p}</span>
+              <span className="font-bold" style={{ color: SENSOR_META.honeyd.color }}>{count}</span>
+            </div>
+          ))
+        }
       </div>
     </div>
   )
@@ -907,6 +911,8 @@ export default function ClientSensors() {
               )
             }
 
+            const sensorOnline = sensors.some(s => isOnlineFn(s.last_seen))
+
             return (
               <motion.div
                 key={key}
@@ -933,11 +939,19 @@ export default function ClientSensors() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-full"
-                        style={{ background: 'rgba(52,211,153,0.08)', color: '#34d399', border: '1px solid rgba(52,211,153,0.2)' }}>
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                        Online
-                      </span>
+                      {sensorOnline ? (
+                        <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-full"
+                          style={{ background: 'rgba(52,211,153,0.08)', color: '#34d399', border: '1px solid rgba(52,211,153,0.2)' }}>
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          Online
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-full"
+                          style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.3)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.3)' }} />
+                          Offline
+                        </span>
+                      )}
                       <ChevronDown
                         className="w-4 h-4 transition-transform duration-200"
                         style={{ color: 'var(--txt-3)', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}

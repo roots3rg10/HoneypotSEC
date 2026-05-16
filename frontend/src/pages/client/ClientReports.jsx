@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { FileText, Printer, TrendingUp, Shield, Globe, Cpu } from 'lucide-react'
-import { getSummary, getOverview, getHoneypots } from '../../services/api'
+import { getClientSummary, getClientOverview, getClientHoneypots } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import { usePreviewUser } from '../../context/PreviewUserContext'
 import PlanGate, { hasPlan } from '../../components/PlanGate'
@@ -10,8 +10,9 @@ export default function ClientReports() {
   const { user: authUser } = useAuth()
   const previewUser = usePreviewUser()
   const user = previewUser ?? authUser
-  const plan  = user?.plan || 'basico'
-  const isPro = hasPlan(plan, 'profesional')
+  const plan     = user?.plan || 'basico'
+  const isPro    = hasPlan(plan, 'profesional')
+  const tenantId = user?.id
 
   const [summary,   setSummary]   = useState(null)
   const [overview,  setOverview]  = useState(null)
@@ -19,14 +20,14 @@ export default function ClientReports() {
   const now = new Date()
 
   useEffect(() => {
-    if (!isPro) return
-    getSummary().then(r => setSummary(r.data)).catch(() => {})
-    getOverview().then(r => setOverview(r.data)).catch(() => {})
-    getHoneypots().then(r => setHoneypots(r.data || [])).catch(() => {})
-  }, [isPro])
+    if (!isPro || !tenantId) return
+    getClientSummary(tenantId, 30).then(r => setSummary(r.data)).catch(() => {})
+    getClientOverview(tenantId).then(r => setOverview(r.data)).catch(() => {})
+    getClientHoneypots(tenantId, 30).then(r => setHoneypots(r.data || [])).catch(() => {})
+  }, [isPro, tenantId])
 
   const score = summary
-    ? Math.max(0, 100 - Math.min(100, Math.floor((summary.attacks_24h || 0) / 3)))
+    ? Math.max(0, 100 - Math.min(100, Math.floor((summary.attacks_period || 0) / 3)))
     : null
 
   return (
@@ -92,10 +93,10 @@ export default function ClientReports() {
           {/* Summary KPIs */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             {[
-              { icon: Shield,     label: 'Score seguridad',  value: score !== null ? `${score}/100` : '—', color: score > 70 ? '#fb7185' : score > 40 ? '#FBBF24' : '#34d399' },
-              { icon: TrendingUp, label: 'Ataques (24h)',     value: summary?.attacks_24h ?? '—',          color: '#FBBF24' },
-              { icon: Globe,      label: 'Total ataques',     value: summary?.total_attacks ?? '—',         color: '#60a5fa' },
-              { icon: Cpu,        label: 'Sensores activos',  value: '6 / 6',                              color: '#34d399' },
+              { icon: Shield,     label: 'Score seguridad',  value: score !== null ? `${score}/100` : '—', color: score !== null && score > 70 ? '#fb7185' : score !== null && score > 40 ? '#FBBF24' : '#34d399' },
+              { icon: TrendingUp, label: 'Ataques (30d)',     value: summary?.attacks_period ?? '—',        color: '#FBBF24' },
+              { icon: Globe,      label: 'Total ataques',     value: summary?.total_attacks  ?? '—',        color: '#60a5fa' },
+              { icon: Cpu,        label: 'Sensores activos',  value: summary?.sensor_count   ?? '—',        color: '#34d399' },
             ].map(({ icon: Icon, label, value, color }) => (
               <div key={label} className="rounded-xl p-4 text-center"
                 style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}>
@@ -134,14 +135,15 @@ export default function ClientReports() {
             <h3 className="font-display font-bold text-sm mb-3" style={{ color: 'var(--txt)' }}>Estado de sensores</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {['Cowrie', 'Dionaea', 'Glastopf', 'Conpot', 'Honeytrap', 'Honeyd'].map(name => {
-                const stats = honeypots.find(h => h.name?.toLowerCase() === name.toLowerCase())
+                const stats = honeypots.find(h => h.honeypot?.toLowerCase() === name.toLowerCase())
                 return (
                   <div key={name} className="rounded-lg px-4 py-3 flex items-center justify-between"
                     style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}>
                     <span className="text-sm font-semibold" style={{ color: 'var(--txt-1)' }}>{name}</span>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs" style={{ color: 'var(--txt-3)' }}>{stats?.attacks_24h ?? stats?.count ?? 0} att.</span>
-                      <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                      <span className="text-xs" style={{ color: 'var(--txt-3)' }}>{stats?.count ?? 0} att.</span>
+                      <span className="w-2 h-2 rounded-full"
+                        style={{ background: stats?.count ? '#4ade80' : 'rgba(255,255,255,0.2)' }} />
                     </div>
                   </div>
                 )

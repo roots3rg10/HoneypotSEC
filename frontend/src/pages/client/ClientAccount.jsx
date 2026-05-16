@@ -5,9 +5,9 @@ import { usePreviewUser } from '../../context/PreviewUserContext'
 import { hasPlan } from '../../components/PlanGate'
 
 const PLAN_DETAILS = {
-  basico:      { name: 'Básico',      color: '#94a3b8', features: ['2 sensores activos', 'Dashboard básico', 'Score de seguridad', 'Historial 7 días'] },
-  profesional: { name: 'Profesional', color: '#FBBF24', features: ['6 sensores activos', 'Mapa geográfico', 'Alertas en tiempo real', 'Informes PDF', 'Historial 30 días'] },
-  empresarial: { name: 'Empresarial', color: '#fb7185', features: ['Sensores ilimitados', 'API completa sin límites', 'Alertas + SMS', 'Informes personalizados', 'SLA 99.9%', 'Soporte 24/7', 'Account manager dedicado'] },
+  basico:      { name: 'Básico',      color: '#94a3b8', features: ['2 sensores activos', 'Dashboard básico', 'Score de seguridad', 'Historial 30 días'] },
+  profesional: { name: 'Profesional', color: '#FBBF24', features: ['6 sensores activos', 'Mapa geográfico', 'Alertas en tiempo real', 'Informes PDF', 'Historial 90 días (3 meses)'] },
+  empresarial: { name: 'Empresarial', color: '#fb7185', features: ['Sensores ilimitados', 'API completa sin límites', 'Alertas + SMS', 'Informes personalizados', 'Historial 180 días (6 meses)', 'SLA 99.9%', 'Soporte 24/7', 'Account manager dedicado'] },
 }
 
 function InfoRow({ icon: Icon, label, value }) {
