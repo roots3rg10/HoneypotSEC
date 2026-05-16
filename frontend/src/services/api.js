@@ -66,4 +66,4 @@ export const generateSensorToken = (clientId) =>
   api.post('/sensor/generate-token', { client_id: clientId })
 export const getClientToken    = (clientId) => api.get(`/sensor/client-token/${clientId}`)
 export const revokeClientToken = (clientId) => api.delete(`/sensor/client-token/${clientId}`)
-export const getMySensors = () => api.get('/sensor/list/mine')
+export const getMySensors = (tenantId) => api.get('/sensor/list/mine', tenantId ? { params: { tenant_id: tenantId } } : {})

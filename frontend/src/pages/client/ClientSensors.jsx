@@ -69,10 +69,13 @@ export default function ClientSensors() {
 
   const INSTALL_CMD = `curl -s https://honeypotsec.duckdns.org/install | sudo bash -s -- --token <TU_TOKEN>`
 
+  const ONLINE_MS = 3 * 60 * 1000
+  const isOnlineFn = (lastSeen) => lastSeen && (Date.now() - new Date(lastSeen).getTime()) < ONLINE_MS
+
   useEffect(() => {
     getHoneypots().then(r => setData(r.data || [])).catch(() => {})
-    getMySensors().then(r => setSensors(r.data || [])).catch(() => {})
-  }, [])
+    getMySensors(user?.id).then(r => setSensors(r.data || [])).catch(() => {})
+  }, [user?.id])
 
   useEffect(() => {
     if (!user?.id) return
@@ -92,7 +95,7 @@ export default function ClientSensors() {
 
   const activeCount  = activeSensors.length
   const totalCount   = Object.keys(SENSOR_META).length
-  const installedOk  = sensors.filter(s => s.status === 'active').length
+  const installedOk  = sensors.filter(s => isOnlineFn(s.last_seen)).length
 
   return (
     <div className="space-y-8">
@@ -206,7 +209,7 @@ export default function ClientSensors() {
           </p>
           <div className="space-y-3">
             {sensors.map((s, i) => {
-              const isOnline = s.status === 'active'
+              const isOnline = isOnlineFn(s.last_seen)
               return (
                 <motion.div
                   key={s.id}

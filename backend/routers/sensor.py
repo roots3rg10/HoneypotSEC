@@ -322,10 +322,28 @@ async def bootstrap(
     )
 
 
+def _is_public_ip(ip: str) -> bool:
+    """Devuelve True si la IP no es privada ni de Docker."""
+    if not ip:
+        return False
+    parts = ip.split(".")
+    if len(parts) != 4:
+        return False
+    try:
+        a, b = int(parts[0]), int(parts[1])
+        if a == 10: return False
+        if a == 172 and 16 <= b <= 31: return False
+        if a == 192 and b == 168: return False
+        return True
+    except ValueError:
+        return False
+
+
 @router.api_route("/heartbeat", methods=["GET", "POST"])
 async def heartbeat(
-    token: str = Query(...),
-    db:    AsyncSession = Depends(get_db),
+    request: Request,
+    token:   str          = Query(...),
+    db:      AsyncSession = Depends(get_db),
 ):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM],
@@ -343,6 +361,16 @@ async def heartbeat(
         raise HTTPException(status_code=404, detail="Sensor no encontrado")
 
     sensor.last_seen = datetime.now(timezone.utc)
+
+    # Actualizar IP pública desde cabecera que pone nginx
+    client_ip = (
+        request.headers.get("X-Real-IP") or
+        (request.headers.get("X-Forwarded-For") or "").split(",")[0].strip() or
+        (request.client.host if request.client else None)
+    )
+    if client_ip and _is_public_ip(client_ip):
+        sensor.ip_address = client_ip[:45]
+
     await db.commit()
     return {"status": "ok"}
 
@@ -358,11 +386,17 @@ async def list_sensors(
 
 @router.get("/list/mine", response_model=list[SensorOut])
 async def list_my_sensors(
-    db:           AsyncSession = Depends(get_db),
-    current_user: User         = Depends(get_current_user),
+    tenant_id:    Optional[int] = None,
+    db:           AsyncSession  = Depends(get_db),
+    current_user: User          = Depends(get_current_user),
 ):
+    if current_user.role in ("admin", "employee") and tenant_id is not None:
+        effective_id = tenant_id
+    else:
+        effective_id = current_user.id
+
     result = await db.execute(
-        select(Sensor).where(Sensor.tenant_id == current_user.id)
+        select(Sensor).where(Sensor.tenant_id == effective_id)
         .order_by(Sensor.installed_at.desc())
     )
     return result.scalars().all()

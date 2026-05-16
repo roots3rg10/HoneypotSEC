@@ -2,13 +2,29 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   ShieldAlert, Activity, Globe, Cpu, TrendingUp, TrendingDown,
-  AlertTriangle, WifiOff, Terminal, RefreshCw, Clock,
+  AlertTriangle, WifiOff, Terminal, RefreshCw, Clock, Wifi, Server,
 } from 'lucide-react'
-import { getClientSummary, getClientOverview, getMyAttacks } from '../../services/api'
+import { getClientSummary, getClientOverview, getMyAttacks, getMySensors } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import { usePreviewUser } from '../../context/PreviewUserContext'
 import AttackMap from '../../components/Dashboard/AttackMap'
 import PlanGate, { hasPlan } from '../../components/PlanGate'
+
+const ONLINE_THRESHOLD_MS = 3 * 60 * 1000  // 3 minutos = 3 heartbeats perdidos
+
+function isSensorOnline(lastSeen) {
+  if (!lastSeen) return false
+  return (Date.now() - new Date(lastSeen).getTime()) < ONLINE_THRESHOLD_MS
+}
+
+function lastSeenLabel(lastSeen) {
+  if (!lastSeen) return 'Sin contacto'
+  const s = Math.floor((Date.now() - new Date(lastSeen).getTime()) / 1000)
+  if (s < 60)   return `hace ${s}s`
+  if (s < 3600) return `hace ${Math.floor(s / 60)}min`
+  if (s < 86400)return `hace ${Math.floor(s / 3600)}h`
+  return `hace ${Math.floor(s / 86400)}d`
+}
 
 // ── Subcomponentes ────────────────────────────────────────────
 
@@ -200,6 +216,7 @@ export default function ClientDashboard() {
   const [summary,     setSummary]     = useState(null)
   const [overview,    setOverview]    = useState(null)
   const [alerts,      setAlerts]      = useState([])
+  const [sensors,     setSensors]     = useState([])
   const [loading,     setLoading]     = useState(true)
   const [lastUpdated, setLastUpdated] = useState(null)
 
@@ -216,6 +233,7 @@ export default function ClientDashboard() {
       getClientOverview(tenantId).then(r => setOverview(r.data)).catch(() => {}),
       getMyAttacks({ limit: isPro ? 8 : 3, tenant_id: tenantId, days: 7 })
         .then(r => setAlerts(r.data?.items || [])).catch(() => {}),
+      getMySensors(tenantId).then(r => setSensors(r.data || [])).catch(() => {}),
     ]).finally(() => { setLoading(false); markUpdated() })
 
     // Polling cada 30 s para actualizar en tiempo real
@@ -223,6 +241,7 @@ export default function ClientDashboard() {
       getClientSummary(tenantId, 7).then(r => setSummary(r.data)).catch(() => {})
       getMyAttacks({ limit: isPro ? 8 : 3, tenant_id: tenantId, days: 7 })
         .then(r => setAlerts(r.data?.items || [])).catch(() => {})
+      getMySensors(tenantId).then(r => setSensors(r.data || [])).catch(() => {})
       markUpdated()
     }, 30000)
 
@@ -356,6 +375,78 @@ export default function ClientDashboard() {
           </p>
         </motion.div>
       </div>
+
+      {/* Estado de servidores */}
+      {sensors.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.28 }}
+          className="rounded-2xl"
+          style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+          <div className="px-5 py-4 border-b flex items-center gap-2" style={{ borderColor: 'var(--card-header-border)' }}>
+            <Server className="w-4 h-4 text-amber-400" />
+            <span className="font-display font-bold text-sm" style={{ color: 'var(--txt)' }}>
+              Estado de servidores
+            </span>
+            <span className="ml-auto text-[10px]" style={{ color: 'var(--txt-3)' }}>
+              {sensors.filter(s => isSensorOnline(s.last_seen)).length} / {sensors.length} en línea
+            </span>
+          </div>
+          <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+            {sensors.map(s => {
+              const online = isSensorOnline(s.last_seen)
+              return (
+                <div key={s.id} className="px-5 py-3 flex items-center gap-4">
+                  {/* Indicador online/offline */}
+                  <div className="shrink-0 relative">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+                      style={{
+                        background: online ? 'rgba(52,211,153,0.08)' : 'rgba(255,255,255,0.04)',
+                        border: `1px solid ${online ? 'rgba(52,211,153,0.25)' : 'rgba(255,255,255,0.08)'}`,
+                      }}>
+                      {online
+                        ? <Wifi className="w-3.5 h-3.5 text-emerald-400" />
+                        : <WifiOff className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.25)' }} />}
+                    </div>
+                    {online && (
+                      <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400"
+                        style={{ boxShadow: '0 0 6px #34d399' }} />
+                    )}
+                  </div>
+
+                  {/* Nombre + hostname */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold truncate" style={{ color: 'var(--txt)' }}>
+                      {s.hostname || s.name || `Sensor #${s.id}`}
+                    </p>
+                    <p className="text-[10px] mt-0.5" style={{ color: 'var(--txt-3)' }}>
+                      {lastSeenLabel(s.last_seen)}
+                    </p>
+                  </div>
+
+                  {/* IP */}
+                  <div className="text-right shrink-0">
+                    <p className="text-xs font-mono font-semibold" style={{ color: online ? 'var(--txt-1)' : 'var(--txt-3)' }}>
+                      {s.ip_address || '—'}
+                    </p>
+                    <p className="text-[10px]" style={{ color: 'var(--txt-3)' }}>IP pública</p>
+                  </div>
+
+                  {/* Badge estado */}
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shrink-0"
+                    style={{
+                      background: online ? 'rgba(52,211,153,0.08)' : 'rgba(255,255,255,0.04)',
+                      color:      online ? '#34d399' : 'rgba(255,255,255,0.3)',
+                      border:     `1px solid ${online ? 'rgba(52,211,153,0.2)' : 'rgba(255,255,255,0.08)'}`,
+                      minWidth: '64px', textAlign: 'center',
+                    }}>
+                    {online ? '● Online' : '○ Offline'}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </motion.div>
+      )}
 
       {/* Alertas recientes */}
       <motion.div
