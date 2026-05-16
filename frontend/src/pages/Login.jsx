@@ -1,38 +1,15 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Lock, User, AlertCircle, Building2, Shield, ChevronRight } from 'lucide-react'
+import { Lock, User, AlertCircle, ChevronRight, Shield } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-
-const ROLE_TABS = [
-  {
-    id:    'empresa',
-    label: 'Portal empresa',
-    icon:  Building2,
-    desc:  'Accede al panel de monitorización de tu infraestructura',
-    accent: '#FBBF24',
-    hint:  'Clientes con contrato activo',
-  },
-  {
-    id:    'interno',
-    label: 'Acceso interno',
-    icon:  Shield,
-    desc:  'Área reservada para el equipo de HoneypotSEC',
-    accent: '#60a5fa',
-    hint:  'Administradores y analistas',
-  },
-]
 
 export default function Login() {
   const navigate = useNavigate()
   const { login } = useAuth()
-  const [tab,     setTab]     = useState('empresa')
   const [form,    setForm]    = useState({ username: '', password: '' })
   const [error,   setError]   = useState('')
   const [loading, setLoading] = useState(false)
-
-  const activeTab = ROLE_TABS.find(t => t.id === tab)
-  const accent    = activeTab.accent
 
   function handleChange(e) {
     setForm(f => ({ ...f, [e.target.name]: e.target.value }))
@@ -44,9 +21,10 @@ export default function Login() {
     setLoading(true)
     try {
       const me = await login(form.username, form.password)
-      if (me.role === 'client')        navigate('/client/dashboard', { replace: true })
-      else if (me.role === 'employee') navigate('/academy',          { replace: true })
-      else                             navigate('/dashboard',        { replace: true })
+      if (me.role === 'client' && me.plan === 'freemium') navigate('/academy',          { replace: true })
+      else if (me.role === 'client')                       navigate('/client/dashboard', { replace: true })
+      else if (me.role === 'employee')                     navigate('/academy',          { replace: true })
+      else                                                 navigate('/dashboard',        { replace: true })
     } catch (err) {
       const msg = err?.response?.data?.detail || 'Usuario o contraseña incorrectos.'
       setError(msg)
@@ -56,126 +34,128 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6" style={{ background: '#050505' }}>
+    <div className="min-h-screen flex items-center justify-center p-6"
+      style={{ background: '#050505' }}>
+
+      {/* Glow de fondo */}
+      <div style={{
+        position: 'fixed', inset: 0, pointerEvents: 'none',
+        background: 'radial-gradient(ellipse 70% 45% at 50% -5%, rgba(251,191,36,0.09) 0%, transparent 70%)',
+      }} />
+
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 28 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45 }}
-        className="w-full max-w-sm"
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="w-full max-w-sm relative"
       >
         {/* Logo */}
-        <div className="flex flex-col items-center mb-8">
-          <img src="/logo.jpeg" alt="Logo"
-            className="w-16 h-16 rounded-2xl object-cover mb-5"
-            style={{ border: '1px solid rgba(255,255,255,0.08)' }} />
-          <h1 className="font-display font-black text-2xl text-white tracking-tight">HONEYPOT</h1>
-          <p className="font-bold text-xs tracking-[0.2em] mt-1" style={{ color: '#FBBF24' }}>CYBERSECURITY</p>
-        </div>
-
-        {/* Selector de tipo de acceso */}
-        <div className="grid grid-cols-2 gap-2 mb-6">
-          {ROLE_TABS.map(t => {
-            const Icon    = t.icon
-            const active  = tab === t.id
-            return (
-              <button
-                key={t.id}
-                onClick={() => { setTab(t.id); setError('') }}
-                className="rounded-xl p-3 text-left transition-all duration-200 outline-none"
-                style={{
-                  background: active ? `${t.accent}10` : 'rgba(255,255,255,0.025)',
-                  border:     active ? `1px solid ${t.accent}40` : '1px solid rgba(255,255,255,0.07)',
-                  boxShadow:  active ? `0 0 20px ${t.accent}10` : 'none',
-                }}
-              >
-                <div className="flex items-center gap-2 mb-1.5">
-                  <div className="p-1.5 rounded-lg"
-                    style={{ background: active ? `${t.accent}18` : 'rgba(255,255,255,0.04)' }}>
-                    <Icon className="w-3.5 h-3.5"
-                      style={{ color: active ? t.accent : 'rgba(255,255,255,0.3)' }} />
-                  </div>
-                  <span className="text-xs font-bold"
-                    style={{ color: active ? t.accent : 'rgba(255,255,255,0.4)' }}>
-                    {t.label}
-                  </span>
-                </div>
-                <p className="text-[10px] leading-tight" style={{ color: 'rgba(255,255,255,0.25)' }}>
-                  {t.hint}
-                </p>
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Descripción del acceso seleccionado */}
-        <AnimatePresence mode="wait">
-          <motion.p
-            key={tab}
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 4 }}
-            transition={{ duration: 0.2 }}
-            className="text-xs text-center mb-6"
-            style={{ color: 'rgba(255,255,255,0.3)' }}
+        <div className="flex flex-col items-center mb-10">
+          <motion.div
+            initial={{ scale: 0.75, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.1, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+            className="relative mb-5"
           >
-            {activeTab.desc}
-          </motion.p>
-        </AnimatePresence>
+            <div style={{
+              position: 'absolute', inset: -12, borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(251,191,36,0.13) 0%, transparent 70%)',
+            }} />
+            <img src="/logo.jpeg" alt="Logo"
+              className="w-16 h-16 rounded-2xl object-cover relative z-10"
+              style={{ border: '1px solid rgba(251,191,36,0.25)', boxShadow: '0 8px 32px rgba(251,191,36,0.12)' }} />
+          </motion.div>
+          <h1 className="font-display font-black text-2xl text-white tracking-tight">HONEYPOT</h1>
+          <p className="font-bold text-xs tracking-[0.22em] mt-1" style={{ color: '#FBBF24' }}>CYBERSECURITY</p>
+        </div>
 
-        {/* Card del formulario */}
-        <div className="rounded-2xl p-7 transition-all duration-300"
+        {/* Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          className="rounded-2xl p-7"
           style={{
-            background:  'rgba(255,255,255,0.025)',
-            border:      `1px solid ${accent}20`,
-            boxShadow:   `0 24px 64px rgba(0,0,0,0.7), 0 0 0 1px ${accent}08`,
-          }}>
-
-          {/* Franja de color superior según rol */}
-          <div className="flex items-center gap-2 mb-6 pb-4"
+            background: 'rgba(255,255,255,0.028)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            boxShadow: '0 32px 80px rgba(0,0,0,0.85), 0 0 0 1px rgba(251,191,36,0.05)',
+          }}
+        >
+          {/* Cabecera */}
+          <div className="flex items-center gap-3 mb-7 pb-5"
             style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-            <div className="p-1.5 rounded-lg" style={{ background: `${accent}15` }}>
-              {tab === 'empresa'
-                ? <Building2 className="w-3.5 h-3.5" style={{ color: accent }} />
-                : <Shield    className="w-3.5 h-3.5" style={{ color: accent }} />}
+            <div className="p-2 rounded-xl" style={{ background: 'rgba(251,191,36,0.1)' }}>
+              <Shield className="w-4 h-4" style={{ color: '#FBBF24' }} />
             </div>
-            <span className="text-xs font-bold" style={{ color: accent }}>
-              {tab === 'empresa' ? 'Portal cliente' : 'Acceso restringido'}
-            </span>
+            <div>
+              <p className="text-sm font-bold text-white">Acceso seguro</p>
+              <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                Introduce tus credenciales
+              </p>
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Usuario */}
             <div>
-              <label className="label-sm block mb-1.5">Usuario</label>
+              <label className="block text-xs font-bold mb-2"
+                style={{ color: 'rgba(255,255,255,0.45)' }}>
+                Usuario
+              </label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
-                  style={{ color: 'rgba(255,255,255,0.2)' }} />
+                  style={{ color: 'rgba(255,255,255,0.18)' }} />
                 <input
                   name="username" type="text" autoComplete="username"
                   required value={form.username} onChange={handleChange}
-                  placeholder="usuario"
-                  className="w-full rounded-xl pl-10 pr-4 py-3 text-sm text-white outline-none transition-all"
-                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', caretColor: accent }}
-                  onFocus={e => { e.target.style.borderColor = `${accent}50`; e.target.style.boxShadow = `0 0 0 3px ${accent}10` }}
-                  onBlur={e  => { e.target.style.borderColor = 'rgba(255,255,255,0.08)'; e.target.style.boxShadow = 'none' }}
+                  placeholder="tu usuario"
+                  className="w-full rounded-xl pl-10 pr-4 py-3 text-sm outline-none transition-all"
+                  style={{
+                    color: 'white',
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    caretColor: '#FBBF24',
+                  }}
+                  onFocus={e => {
+                    e.target.style.borderColor = 'rgba(251,191,36,0.45)'
+                    e.target.style.boxShadow   = '0 0 0 3px rgba(251,191,36,0.08)'
+                  }}
+                  onBlur={e => {
+                    e.target.style.borderColor = 'rgba(255,255,255,0.08)'
+                    e.target.style.boxShadow   = 'none'
+                  }}
                 />
               </div>
             </div>
 
             {/* Contraseña */}
             <div>
-              <label className="label-sm block mb-1.5">Contraseña</label>
+              <label className="block text-xs font-bold mb-2"
+                style={{ color: 'rgba(255,255,255,0.45)' }}>
+                Contraseña
+              </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
-                  style={{ color: 'rgba(255,255,255,0.2)' }} />
+                  style={{ color: 'rgba(255,255,255,0.18)' }} />
                 <input
                   name="password" type="password" autoComplete="current-password"
                   required value={form.password} onChange={handleChange}
                   placeholder="••••••••"
-                  className="w-full rounded-xl pl-10 pr-4 py-3 text-sm text-white outline-none transition-all"
-                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', caretColor: accent }}
-                  onFocus={e => { e.target.style.borderColor = `${accent}50`; e.target.style.boxShadow = `0 0 0 3px ${accent}10` }}
-                  onBlur={e  => { e.target.style.borderColor = 'rgba(255,255,255,0.08)'; e.target.style.boxShadow = 'none' }}
+                  className="w-full rounded-xl pl-10 pr-4 py-3 text-sm outline-none transition-all"
+                  style={{
+                    color: 'white',
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    caretColor: '#FBBF24',
+                  }}
+                  onFocus={e => {
+                    e.target.style.borderColor = 'rgba(251,191,36,0.45)'
+                    e.target.style.boxShadow   = '0 0 0 3px rgba(251,191,36,0.08)'
+                  }}
+                  onBlur={e => {
+                    e.target.style.borderColor = 'rgba(255,255,255,0.08)'
+                    e.target.style.boxShadow   = 'none'
+                  }}
                 />
               </div>
             </div>
@@ -184,9 +164,15 @@ export default function Login() {
             <AnimatePresence>
               {error && (
                 <motion.div
-                  initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
                   className="flex items-center gap-2 text-xs px-3 py-2.5 rounded-xl"
-                  style={{ background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.2)', color: '#fb7185' }}
+                  style={{
+                    background: 'rgba(244,63,94,0.08)',
+                    border: '1px solid rgba(244,63,94,0.2)',
+                    color: '#fb7185',
+                  }}
                 >
                   <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                   {error}
@@ -196,31 +182,33 @@ export default function Login() {
 
             <button
               type="submit" disabled={loading}
-              className="w-full py-3 rounded-xl text-sm font-bold mt-1 flex items-center justify-center gap-2 transition-all duration-200 disabled:opacity-50"
+              className="w-full py-3 rounded-xl text-sm font-black mt-2 flex items-center justify-center gap-2 transition-all duration-200 disabled:opacity-50"
               style={{
-                background:  loading ? `${accent}20` : `linear-gradient(135deg, ${accent}ee, ${accent}bb)`,
-                color:       tab === 'empresa' ? '#000' : '#fff',
-                boxShadow:   loading ? 'none' : `0 4px 20px ${accent}30`,
+                background:  loading
+                  ? 'rgba(251,191,36,0.15)'
+                  : 'linear-gradient(135deg, #FBBF24 0%, #F59E0B 100%)',
+                color:      '#000',
+                boxShadow:   loading ? 'none' : '0 4px 28px rgba(251,191,36,0.3)',
+                letterSpacing: '0.02em',
               }}
             >
-              {loading ? 'Verificando...' : (
-                <>
-                  {tab === 'empresa' ? 'Acceder al portal' : 'Entrar'}
-                  <ChevronRight className="w-4 h-4" />
-                </>
-              )}
+              {loading
+                ? 'Verificando...'
+                : <> Acceder <ChevronRight className="w-4 h-4" /> </>
+              }
             </button>
           </form>
-        </div>
+        </motion.div>
 
-        <p className="text-center mt-5 text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
-          ¿Eres empresa y no tienes cuenta?{' '}
-          <Link to="/register" className="font-bold hover:underline transition-colors"
+        {/* Footer */}
+        <p className="text-center mt-6 text-xs" style={{ color: 'rgba(255,255,255,0.22)' }}>
+          ¿No tienes cuenta?{' '}
+          <Link to="/register" className="font-bold transition-colors hover:underline"
             style={{ color: '#FBBF24' }}>
-            Crear cuenta gratuita
+            Registrarse gratis
           </Link>
         </p>
-        <p className="text-center mt-3 text-xs" style={{ color: 'rgba(255,255,255,0.18)' }}>
+        <p className="text-center mt-3 text-xs" style={{ color: 'rgba(255,255,255,0.15)' }}>
           <Link to="/" className="hover:text-white transition-colors">← Volver a la web</Link>
         </p>
       </motion.div>

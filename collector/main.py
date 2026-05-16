@@ -20,6 +20,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [collector] %(messag
 log = logging.getLogger(__name__)
 
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://honeypot_user:honeypot_pass@db:5432/honeypot_db")
+SENSOR_ID    = int(os.getenv("SENSOR_ID", "0")) or None  # None si no se configura
 
 # Mapa honeypot → (ruta del log, módulo parser)
 SOURCES = {
@@ -56,9 +57,9 @@ def insert_event(conn, event):
             INSERT INTO attacks
               (timestamp, honeypot, source_ip, source_port, dest_port, protocol,
                country, country_code, city, latitude, longitude,
-               attack_type, username, password, payload, session_id, raw_data)
+               attack_type, username, password, payload, session_id, raw_data, sensor_id)
             VALUES
-              (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+              (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (
             event.timestamp, event.honeypot, event.source_ip,
             event.source_port, event.dest_port, event.protocol,
@@ -67,6 +68,7 @@ def insert_event(conn, event):
             event.attack_type, event.username, event.password,
             event.payload, event.session_id,
             json.dumps(event.raw_data) if event.raw_data else None,
+            SENSOR_ID,
         ))
     conn.commit()
 

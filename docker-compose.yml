@@ -58,6 +58,7 @@ services:
       SMTP_FROM:         ${SMTP_FROM:-alertas@honeypot.local}
       ALERT_EMAIL_TO:    ${ALERT_EMAIL_TO:-}
       SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
+      SENSOR_ID:         ${COLLECTOR_SENSOR_ID:-}
     volumes:
       - cowrie_logs:/logs/cowrie:ro
       - dionaea_logs:/logs/dionaea:ro
@@ -80,7 +81,7 @@ services:
       - "2222:2222"
       - "2323:2323"
     volumes:
-      - cowrie_logs:/home/cowrie/var/log/cowrie
+      - cowrie_logs:/cowrie/cowrie-git/var/log/cowrie
       - ./honeypots/cowrie/cowrie.cfg:/home/cowrie/etc/cowrie.cfg:ro
     networks:
       - honeypot_net

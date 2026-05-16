@@ -9,7 +9,7 @@ class User(Base):
 
     id              = Column(Integer, primary_key=True, index=True)
     username        = Column(String(100), nullable=False, unique=True)
-    email           = Column(String(255), nullable=False, unique=True)
+    email           = Column(String(255), nullable=True,  unique=True)
     hashed_password = Column(String(255), nullable=False)
     role            = Column(String(20), nullable=False, default="employee")
     is_active       = Column(Boolean, nullable=False, default=True)
@@ -17,7 +17,9 @@ class User(Base):
     # Campos para clientes empresa (role="client")
     company_name    = Column(String(255), nullable=True)
     company_sector  = Column(String(100), nullable=True)
-    plan            = Column(String(20),  nullable=True, default="basico")
+    plan                   = Column(String(20),  nullable=True, default="basico")
+    sensor_install_token   = Column(Text,  nullable=True)
+    sensor_token_created_at = Column(DateTime(timezone=True), nullable=True)
 
 
 class Attack(Base):
@@ -41,6 +43,7 @@ class Attack(Base):
     payload      = Column(Text)
     session_id   = Column(String(255))
     raw_data     = Column(JSONB)
+    sensor_id    = Column(Integer, nullable=True, index=True)
 
 
 class QuizQuestion(Base):

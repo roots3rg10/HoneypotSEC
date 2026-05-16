@@ -2,10 +2,10 @@ import { Link } from 'react-router-dom'
 import { Lock, ArrowRight } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
-const PLAN_ORDER = { basico: 0, profesional: 1, empresarial: 2 }
-const PLAN_LABEL = { profesional: 'Profesional', empresarial: 'Empresarial' }
-const PLAN_COLOR = { profesional: '#FBBF24', empresarial: '#fb7185' }
-const PLAN_PRICE = { profesional: '€30/mes', empresarial: '€50/mes' }
+const PLAN_ORDER = { freemium: 0, basico: 1, profesional: 2, empresarial: 3 }
+const PLAN_LABEL = { basico: 'Básico', profesional: 'Profesional', empresarial: 'Empresarial' }
+const PLAN_COLOR = { basico: 'rgba(148,163,184,0.8)', profesional: '#FBBF24', empresarial: '#fb7185' }
+const PLAN_PRICE = { basico: '€4.99/mes', profesional: '€30/mes', empresarial: '€50/mes' }
 
 export function hasPlan(userPlan, required) {
   return (PLAN_ORDER[userPlan] ?? 0) >= (PLAN_ORDER[required] ?? 0)

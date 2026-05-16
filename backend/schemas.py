@@ -13,7 +13,7 @@ class TokenResponse(BaseModel):
 class UserOut(BaseModel):
     id:             int
     username:       str
-    email:          str
+    email:          Optional[str] = None
     role:           str
     is_active:      bool
     created_at:     datetime
@@ -23,6 +23,11 @@ class UserOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class FreemiumRegisterIn(BaseModel):
+    username: str
+    password: str
 
 
 class ClientRegisterIn(BaseModel):
@@ -198,6 +203,15 @@ class SensorTokenOut(BaseModel):
     install_token: str
     expires_in:    str
     install_cmd:   str
+
+
+class ClientTokenOut(BaseModel):
+    has_token:     bool
+    install_token: Optional[str]  = None
+    install_cmd:   Optional[str]  = None
+    created_at:    Optional[datetime] = None
+    expires_at:    Optional[datetime] = None
+    is_expired:    Optional[bool] = None
 
 
 class SensorBootstrapOut(BaseModel):

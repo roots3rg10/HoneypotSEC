@@ -16,14 +16,15 @@ export const loginApi    = (username, password) =>
   })
 export const getMeApi    = () => api.get('/auth/me')
 export const logoutApi   = () => api.post('/auth/logout')
-export const registerApi = (data) => api.post('/auth/register', data)
+export const registerApi     = (data) => api.post('/auth/register', data)
+export const registerFreeApi = (data) => api.post('/auth/register/free', data)
 
 // Attacks
 export const getAttacks       = (params) => api.get('/attacks', { params })
 export const getAttack        = (id)     => api.get(`/attacks/${id}`)
 export const getPublicAttacks = (limit = 25) => api.get('/attacks/public', { params: { limit } })
 
-// Stats
+// Stats — globales (admin)
 export const getSummary  = ()       => api.get('/stats/summary')
 export const getTimeline = ()       => api.get('/stats/timeline')
 export const getHoneypots = ()      => api.get('/stats/honeypots')
@@ -32,6 +33,11 @@ export const getCountriesByHoneypot  = () => api.get('/stats/countries-by-honeyp
 export const getTopIPs   = ()       => api.get('/stats/top-ips')
 export const getTopPorts = ()       => api.get('/stats/top-ports')
 export const getOverview = ()       => api.get('/stats/overview')
+
+// Stats — filtrados por tenant (portal cliente)
+export const getClientSummary  = (tenantId) => api.get('/stats/client/summary',  { params: { tenant_id: tenantId } })
+export const getClientOverview = (tenantId) => api.get('/stats/client/overview', { params: { tenant_id: tenantId } })
+export const getMyAttacks      = (params)   => api.get('/attacks/mine',           { params })
 
 // Education
 export const getArticles   = (params) => api.get('/education/articles', { params })
@@ -58,4 +64,6 @@ export const getAdminClient   = (id) => api.get(`/auth/admin/clients/${id}`)
 // Sensor
 export const generateSensorToken = (clientId) =>
   api.post('/sensor/generate-token', { client_id: clientId })
+export const getClientToken    = (clientId) => api.get(`/sensor/client-token/${clientId}`)
+export const revokeClientToken = (clientId) => api.delete(`/sensor/client-token/${clientId}`)
 export const getMySensors = () => api.get('/sensor/list/mine')

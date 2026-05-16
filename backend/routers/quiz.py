@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -81,11 +83,16 @@ async def my_quiz_results(
     db:           AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    rows = await db.execute(
+    query = (
         select(QuizResult)
         .where(QuizResult.user_id == current_user.id)
         .order_by(QuizResult.completed_at.desc())
     )
+    if current_user.plan == "freemium":
+        cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+        query = query.where(QuizResult.completed_at >= cutoff)
+
+    rows = await db.execute(query)
     return rows.scalars().all()
 
 

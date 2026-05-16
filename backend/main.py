@@ -2,13 +2,14 @@ import os
 import asyncio
 import json
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select, text
 
 from database import get_db, engine
-from models import Base, User
+from models import Base, User, QuizResult
 from routers import attacks, stats, education, news, quiz, sensor
 from routers import auth
 
@@ -19,13 +20,17 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
         # Migración segura: añadir columnas cliente si no existen
         for col, definition in [
-            ("company_name",   "VARCHAR(255)"),
-            ("company_sector", "VARCHAR(100)"),
-            ("plan",           "VARCHAR(20) DEFAULT 'basico'"),
+            ("company_name",            "VARCHAR(255)"),
+            ("company_sector",          "VARCHAR(100)"),
+            ("plan",                    "VARCHAR(20) DEFAULT 'basico'"),
+            ("sensor_install_token",    "TEXT"),
+            ("sensor_token_created_at", "TIMESTAMPTZ"),
         ]:
             await conn.execute(text(
                 f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {col} {definition}"
             ))
+        # Permitir email nulo (usuarios freemium no necesitan email)
+        await conn.execute(text("ALTER TABLE users ALTER COLUMN email DROP NOT NULL"))
 
     async for db in get_db():
         result = await db.execute(select(User).where(User.role == "admin").limit(1))
@@ -42,6 +47,26 @@ async def lifespan(app: FastAPI):
             await db.commit()
         break
 
+    async def cleanup_freemium_results():
+        from sqlalchemy import delete
+        while True:
+            await asyncio.sleep(3600)
+            cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+            async for db in get_db():
+                freemium_ids = (await db.execute(
+                    select(User.id).where(User.plan == "freemium")
+                )).scalars().all()
+                if freemium_ids:
+                    await db.execute(
+                        delete(QuizResult).where(
+                            QuizResult.user_id.in_(freemium_ids),
+                            QuizResult.completed_at < cutoff,
+                        )
+                    )
+                    await db.commit()
+                break
+
+    asyncio.create_task(cleanup_freemium_results())
     yield
 
 

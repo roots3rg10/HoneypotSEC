@@ -1,16 +1,19 @@
 import os
 from datetime import datetime, timedelta, timezone
+from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from fastapi.responses import PlainTextResponse
+import httpx
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.responses import FileResponse, PlainTextResponse
 from jose import JWTError, jwt
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from dependencies import require_admin
-from models import Sensor, User
-from schemas import SensorBootstrapOut, SensorOut, SensorTokenOut, SensorTokenRequest
+from models import Attack, Sensor, User
+from schemas import SensorBootstrapOut, SensorOut, SensorTokenOut, SensorTokenRequest, ClientTokenOut
 from security import SECRET_KEY, ALGORITHM, get_current_user
 
 router = APIRouter(prefix="/api/sensor", tags=["sensor"])
@@ -19,6 +22,7 @@ BACKEND_URL = os.environ.get("BACKEND_URL", "https://honeypotsec.duckdns.org")
 
 # ─── Honeypots disponibles por plan ───────────────────────────
 PLAN_SERVICES = {
+    "freemium":    [],
     "basico":      ["cowrie", "dionaea"],
     "profesional": ["cowrie", "dionaea", "honeytrap", "conpot"],
     "empresarial": ["cowrie", "dionaea", "honeytrap", "conpot", "glastopf", "honeyd"],
@@ -41,10 +45,10 @@ SERVICE_BLOCKS = {
     image: cowrie/cowrie:latest
     container_name: hs_cowrie
     ports:
-      - "2222:2222"
-      - "2323:2323"
+      - "${PRIVATE_IP}:2222:2222"
+      - "${PRIVATE_IP}:2323:2323"
     volumes:
-      - cowrie_logs:/home/cowrie/var/log/cowrie
+      - cowrie_logs:/cowrie/cowrie-git/var/log/cowrie
     restart: unless-stopped
 """,
     "dionaea": """\
@@ -52,19 +56,29 @@ SERVICE_BLOCKS = {
     image: dinotools/dionaea:latest
     container_name: hs_dionaea
     ports:
-      - "21:21"
-      - "445:445"
-      - "3306:3306"
+      - "${PRIVATE_IP}:21:21"
+      - "${PRIVATE_IP}:445:445"
+      - "${PRIVATE_IP}:3306:3306"
     volumes:
       - dionaea_logs:/opt/dionaea/var/log/dionaea
     restart: unless-stopped
 """,
     "honeytrap": """\
   honeytrap:
-    image: honeytrap/honeytrap:latest
+    build:
+      context: ./agent
+      dockerfile: portmon.Dockerfile
     container_name: hs_honeytrap
+    environment:
+      LISTEN_PORTS: "25,110,143,587"
+      LOG_FILE: /app/logs/honeytrap.json
+    ports:
+      - "${PRIVATE_IP}:25:25"
+      - "${PRIVATE_IP}:110:110"
+      - "${PRIVATE_IP}:143:143"
+      - "${PRIVATE_IP}:587:587"
     volumes:
-      - honeytrap_logs:/data
+      - honeytrap_logs:/app/logs
     restart: unless-stopped
 """,
     "conpot": """\
@@ -72,30 +86,41 @@ SERVICE_BLOCKS = {
     image: honeynet/conpot:latest
     container_name: hs_conpot
     ports:
-      - "102:102"
-      - "502:502"
+      - "${PRIVATE_IP}:102:102"
+      - "${PRIVATE_IP}:502:502"
     volumes:
       - conpot_logs:/var/log/conpot
     restart: unless-stopped
 """,
     "glastopf": """\
   glastopf:
-    image: mushorg/glastopf:latest
+    build:
+      context: ./agent
+      dockerfile: webhoneypot.Dockerfile
     container_name: hs_glastopf
     ports:
-      - "8080:80"
+      - "${WEB_BIND_IP}:8080:80"
     volumes:
-      - glastopf_logs:/opt/glastopf/log
+      - glastopf_logs:/app/logs
     restart: unless-stopped
 """,
     "honeyd": """\
   honeyd:
-    image: honeyd/honeyd:latest
+    build:
+      context: ./agent
+      dockerfile: portmon.Dockerfile
     container_name: hs_honeyd
+    environment:
+      LISTEN_PORTS: "23,3389,5900,1433,6379"
+      LOG_FILE: /app/logs/honeyd.log
+    ports:
+      - "${PRIVATE_IP}:23:23"
+      - "${PRIVATE_IP}:3389:3389"
+      - "${PRIVATE_IP}:5900:5900"
+      - "${PRIVATE_IP}:1433:1433"
+      - "${PRIVATE_IP}:6379:6379"
     volumes:
-      - honeyd_logs:/var/log/honeyd
-    cap_add:
-      - NET_ADMIN
+      - honeyd_logs:/app/logs
     restart: unless-stopped
 """,
 }
@@ -112,11 +137,12 @@ def _build_compose(plan: str, tenant_id: int, ingest_token: str) -> str:
 
     agent_block = f"""\
   hs-agent:
-    image: honeypotsec/agent:latest
+    build: ./agent
     container_name: hs_agent
     environment:
-      INGEST_URL: {BACKEND_URL}/api/ingest/{tenant_id}
+      INGEST_URL: {BACKEND_URL}/api/sensor/ingest/{tenant_id}
       INGEST_TOKEN: {ingest_token}
+      BACKEND_URL: {BACKEND_URL}
       PLAN: {plan}
     volumes:
 {vol_mounts}
@@ -173,13 +199,65 @@ async def generate_install_token(
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
 
     token = _create_install_token(client.id, client.plan or "basico")
-    cmd   = f"curl -s {BACKEND_URL}/install | sudo bash -s -- --token {token}"
+    cmd   = f"curl -sL {BACKEND_URL}/install | sudo bash -s -- --token {token}"
+
+    client.sensor_install_token    = token
+    client.sensor_token_created_at = datetime.now(timezone.utc)
+    await db.commit()
 
     return SensorTokenOut(
         install_token=token,
         expires_in="72 horas",
         install_cmd=cmd,
     )
+
+
+@router.get("/client-token/{client_id}", response_model=ClientTokenOut)
+async def get_client_token(
+    client_id: int,
+    db: AsyncSession = Depends(get_db),
+    _:  User = Depends(require_admin),
+):
+    result = await db.execute(
+        select(User).where(User.id == client_id, User.role == "client")
+    )
+    client = result.scalar_one_or_none()
+    if not client:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
+    if not client.sensor_install_token or not client.sensor_token_created_at:
+        return ClientTokenOut(has_token=False)
+
+    expires_at = client.sensor_token_created_at + timedelta(hours=72)
+    is_expired = datetime.now(timezone.utc) > expires_at
+    cmd        = f"curl -sL {BACKEND_URL}/install | sudo bash -s -- --token {client.sensor_install_token}"
+
+    return ClientTokenOut(
+        has_token=True,
+        install_token=client.sensor_install_token,
+        install_cmd=cmd,
+        created_at=client.sensor_token_created_at,
+        expires_at=expires_at,
+        is_expired=is_expired,
+    )
+
+
+@router.delete("/client-token/{client_id}", status_code=204)
+async def revoke_client_token(
+    client_id: int,
+    db: AsyncSession = Depends(get_db),
+    _:  User = Depends(require_admin),
+):
+    result = await db.execute(
+        select(User).where(User.id == client_id, User.role == "client")
+    )
+    client = result.scalar_one_or_none()
+    if not client:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
+    client.sensor_install_token    = None
+    client.sensor_token_created_at = None
+    await db.commit()
 
 
 @router.get("/install", response_class=PlainTextResponse)
@@ -244,7 +322,7 @@ async def bootstrap(
     )
 
 
-@router.post("/heartbeat")
+@router.api_route("/heartbeat", methods=["GET", "POST"])
 async def heartbeat(
     token: str = Query(...),
     db:    AsyncSession = Depends(get_db),
@@ -288,3 +366,125 @@ async def list_my_sensors(
         .order_by(Sensor.installed_at.desc())
     )
     return result.scalars().all()
+
+
+# ── Servir ficheros del agente ────────────────────────────────
+
+_AGENT_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "sensor", "agent")
+
+
+@router.get("/agent/{filename}", response_class=PlainTextResponse)
+async def get_agent_file(filename: str):
+    allowed = {
+        "agent.py", "requirements.txt", "Dockerfile",
+        "webhoneypot.py", "webhoneypot.Dockerfile",
+        "portmon.py",    "portmon.Dockerfile",
+        "cowrie.cfg",
+    }
+    if filename not in allowed:
+        raise HTTPException(status_code=404)
+    path = os.path.join(_AGENT_DIR, filename)
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail=f"{filename} no encontrado")
+    with open(path) as f:
+        return f.read()
+
+
+# ── Ingest: recibir eventos de sensores remotos ───────────────
+
+class IngestEvent(BaseModel):
+    honeypot:    str
+    source_ip:   str
+    timestamp:   Optional[str] = None
+    source_port: Optional[int] = None
+    dest_port:   Optional[int] = None
+    protocol:    Optional[str] = None
+    attack_type: Optional[str] = None
+    username:    Optional[str] = None
+    password:    Optional[str] = None
+    payload:     Optional[str] = None
+    session_id:  Optional[str] = None
+    raw_data:    Optional[Any] = None
+
+
+_geo_cache: dict[str, dict] = {}
+
+
+async def _geolocate(ip: str) -> dict:
+    if ip in _geo_cache:
+        return _geo_cache[ip]
+    try:
+        async with httpx.AsyncClient(timeout=4) as client:
+            r = await client.get(
+                f"http://ip-api.com/json/{ip}?fields=country,countryCode,city,lat,lon"
+            )
+            data = r.json() if r.is_success else {}
+    except Exception:
+        data = {}
+    _geo_cache[ip] = data
+    return data
+
+
+@router.post("/ingest/{tenant_id}", status_code=202)
+async def ingest_event(
+    tenant_id: int,
+    event:     IngestEvent,
+    request:   Request,
+    db:        AsyncSession = Depends(get_db),
+):
+    # Validar token Bearer
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Token requerido")
+    token = auth.removeprefix("Bearer ").strip()
+
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM],
+                             options={"verify_exp": False})
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Token inválido")
+
+    if payload.get("type") != "sensor_ingest" or payload.get("tenant_id") != tenant_id:
+        raise HTTPException(status_code=401, detail="Token inválido")
+
+    # Actualizar last_seen del sensor
+    sensor_id = payload.get("sensor_id")
+    result = await db.execute(select(Sensor).where(Sensor.id == sensor_id))
+    sensor = result.scalar_one_or_none()
+    if sensor:
+        sensor.last_seen = datetime.now(timezone.utc)
+
+    # Geolocalizar
+    geo = await _geolocate(event.source_ip)
+
+    # Parsear timestamp
+    ts = datetime.now(timezone.utc)
+    if event.timestamp:
+        try:
+            ts = datetime.fromisoformat(event.timestamp)
+        except Exception:
+            pass
+
+    attack = Attack(
+        timestamp    = ts,
+        honeypot     = event.honeypot,
+        source_ip    = event.source_ip,
+        source_port  = event.source_port,
+        dest_port    = event.dest_port,
+        protocol     = event.protocol,
+        country      = geo.get("country"),
+        country_code = geo.get("countryCode"),
+        city         = geo.get("city"),
+        latitude     = geo.get("lat"),
+        longitude    = geo.get("lon"),
+        attack_type  = event.attack_type,
+        username     = event.username,
+        password     = event.password,
+        payload      = event.payload,
+        session_id   = event.session_id,
+        raw_data     = event.raw_data,
+        sensor_id    = sensor_id,
+    )
+    db.add(attack)
+    await db.commit()
+    return {"status": "accepted"}

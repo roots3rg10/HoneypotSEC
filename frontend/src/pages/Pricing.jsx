@@ -5,14 +5,32 @@ import PublicNavbar from '../components/Layout/PublicNavbar'
 
 const PLANS = [
   {
-    id: 'basico',
-    name: 'Básico',
+    id: 'freemium',
+    name: 'Gratuito',
     price: '0',
     period: 'Gratis para siempre',
     icon: Shield,
-    color: 'rgba(148,163,184,0.8)',
-    border: 'rgba(148,163,184,0.15)',
-    bg: 'rgba(148,163,184,0.05)',
+    color: 'rgba(148,163,184,0.7)',
+    border: 'rgba(148,163,184,0.12)',
+    bg: 'rgba(148,163,184,0.04)',
+    features: [
+      'Tests y quizzes de ciberseguridad',
+      'Noticias y artículos formativos',
+      'Historial de resultados (7 días)',
+    ],
+    missing: ['Sensores honeypot', 'Dashboard de amenazas', 'Alertas', 'Informes'],
+    cta: 'Empezar gratis',
+    ctaLink: '/register',
+  },
+  {
+    id: 'basico',
+    name: 'Básico',
+    price: '4.99',
+    period: '€ / mes',
+    icon: Shield,
+    color: 'rgba(148,163,184,0.9)',
+    border: 'rgba(148,163,184,0.2)',
+    bg: 'rgba(148,163,184,0.06)',
     features: [
       '2 sensores honeypot activos',
       'Dashboard de amenazas',
@@ -21,7 +39,7 @@ const PLANS = [
       'Soporte comunidad',
     ],
     missing: ['Alertas en tiempo real', 'Informes PDF', 'API de acceso', 'SLA garantizado'],
-    cta: 'Empezar gratis',
+    cta: 'Contratar',
     ctaLink: '/register',
   },
   {
@@ -120,7 +138,7 @@ export default function Pricing() {
       <section className="max-w-5xl mx-auto px-6 pb-20">
         <motion.div
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.1 }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-5"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5"
         >
           {PLANS.map((plan, i) => {
             const Icon = plan.icon
