@@ -30,7 +30,7 @@ async def list_attacks_public(
 @router.get("", response_model=AttackList)
 async def list_attacks(
     page:      int = Query(1, ge=1),
-    limit:     int = Query(50, ge=1, le=200),
+    limit:     int = Query(50, ge=1, le=1000),
     honeypot:  Optional[str] = None,
     country:   Optional[str] = None,
     sensor_id: Optional[int] = None,

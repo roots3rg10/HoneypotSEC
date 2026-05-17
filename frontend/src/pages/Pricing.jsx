@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Check, Zap, Shield, Building2, ArrowRight } from 'lucide-react'
+import { Check, Zap, Shield, Building2, ArrowRight, Eye, FlaskConical } from 'lucide-react'
 import PublicNavbar from '../components/Layout/PublicNavbar'
 
 const PLANS = [
@@ -20,12 +20,12 @@ const PLANS = [
     ],
     missing: ['Sensores honeypot', 'Dashboard de amenazas', 'Alertas', 'Informes'],
     cta: 'Empezar gratis',
-    ctaLink: '/register',
+    ctaLink: '/register?plan=freemium',
   },
   {
     id: 'basico',
     name: 'Básico',
-    price: '4.99',
+    price: '5',
     period: '€ / mes',
     icon: Shield,
     color: 'rgba(148,163,184,0.9)',
@@ -40,7 +40,7 @@ const PLANS = [
     ],
     missing: ['Alertas en tiempo real', 'Informes PDF', 'API de acceso', 'SLA garantizado'],
     cta: 'Contratar',
-    ctaLink: '/register',
+    ctaLink: '/register?plan=basico',
   },
   {
     id: 'profesional',
@@ -64,7 +64,7 @@ const PLANS = [
     ],
     missing: ['SLA garantizado', 'Onboarding personalizado'],
     cta: 'Empezar 14 días gratis',
-    ctaLink: '/register',
+    ctaLink: '/register?plan=profesional',
   },
   {
     id: 'empresarial',
@@ -87,8 +87,8 @@ const PLANS = [
       'Soporte 24/7 teléfono y chat',
     ],
     missing: [],
-    cta: 'Contactar ventas',
-    ctaLink: '/register',
+    cta: 'Contratar',
+    ctaLink: '/register?plan=empresarial',
   },
 ]
 
@@ -211,6 +211,51 @@ export default function Pricing() {
               </motion.div>
             )
           })}
+        </motion.div>
+      </section>
+
+      {/* Demo gratuita */}
+      <section className="max-w-5xl mx-auto px-6 pb-12">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.2 }}
+          className="rounded-2xl p-8 flex flex-col md:flex-row items-center gap-8"
+          style={{ background: 'rgba(96,165,250,0.04)', border: '1px solid rgba(96,165,250,0.15)' }}
+        >
+          <div className="flex-shrink-0 flex flex-col items-center gap-3">
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
+              style={{ background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.2)' }}>
+              <FlaskConical className="w-8 h-8" style={{ color: '#60a5fa' }} />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full"
+              style={{ background: 'rgba(96,165,250,0.1)', color: '#60a5fa', border: '1px solid rgba(96,165,250,0.2)' }}>
+              Demo gratuita
+            </span>
+          </div>
+          <div className="flex-1 text-center md:text-left">
+            <h3 className="font-display font-black text-xl mb-2" style={{ color: 'var(--txt)' }}>
+              ¿Quieres ver cómo funciona antes de contratar?
+            </h3>
+            <p className="text-sm leading-relaxed mb-1" style={{ color: 'var(--txt-2)' }}>
+              Crea una <strong style={{ color: 'var(--txt)' }}>cuenta gratuita de demostración</strong> y accede a un preview interactivo del dashboard tal y como lo verías con tus propios datos de ataque.
+            </p>
+            <p className="text-sm leading-relaxed" style={{ color: 'var(--txt-2)' }}>
+              También podrás <strong style={{ color: 'var(--txt)' }}>registrar los resultados de tus tests de ciberseguridad</strong>, leer artículos formativos y completar quizzes — todo sin coste.
+            </p>
+          </div>
+          <div className="flex-shrink-0">
+            <Link
+              to="/register?plan=freemium"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all duration-150"
+              style={{
+                background: 'rgba(96,165,250,0.1)',
+                border: '1px solid rgba(96,165,250,0.25)',
+                color: '#60a5fa',
+              }}
+            >
+              <Eye className="w-4 h-4" />
+              Ver demo gratis
+            </Link>
+          </div>
         </motion.div>
       </section>
 

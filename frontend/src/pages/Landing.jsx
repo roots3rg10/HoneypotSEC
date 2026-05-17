@@ -222,15 +222,16 @@ export default function Landing() {
               {
                 id: 'basico',
                 name: 'Básico',
-                price: 'Gratis',
-                priceNum: null,
+                price: '5',
+                priceNum: '5',
                 icon: Shield,
                 color: 'rgba(148,163,184,0.9)',
                 border: 'rgba(148,163,184,0.15)',
                 bg: 'rgba(148,163,184,0.05)',
-                features: ['2 sensores activos', 'Dashboard de amenazas', 'Historial 7 días'],
+                features: ['2 sensores honeypot activos', 'Dashboard de amenazas', 'Alertas por email'],
                 locked: ['Mapa geográfico', 'Alertas en tiempo real', 'Informes PDF'],
-                cta: 'Empezar gratis',
+                cta: 'Contratar',
+                ctaLink: '/register?plan=basico',
                 ctaStyle: 'btn-outline',
               },
               {
@@ -246,6 +247,7 @@ export default function Landing() {
                 features: ['6 sensores activos', 'Mapa geográfico completo', 'Alertas tiempo real', 'Informes PDF mensuales', 'Historial 30 días'],
                 locked: [],
                 cta: 'Empezar 14 días gratis',
+                ctaLink: '/register?plan=profesional',
                 ctaStyle: 'btn-premium',
               },
               {
@@ -259,7 +261,8 @@ export default function Landing() {
                 bg: 'rgba(251,113,133,0.05)',
                 features: ['Sensores ilimitados', 'API de acceso completa', 'Alertas + SMS', 'Informes personalizados', 'SLA 99.9% · Soporte 24/7', 'Account manager dedicado'],
                 locked: [],
-                cta: 'Contactar ventas',
+                cta: 'Contratar',
+                ctaLink: '/register?plan=empresarial',
                 ctaStyle: 'btn-outline',
               },
             ].map((plan, i) => {
@@ -317,7 +320,7 @@ export default function Landing() {
                     ))}
                   </div>
 
-                  <Link to="/register"
+                  <Link to={plan.ctaLink || '/register'}
                     className={`w-full py-3 rounded-xl text-sm font-bold text-center flex items-center justify-center gap-2 transition-all duration-150 ${plan.ctaStyle}`}>
                     {plan.cta}
                     <ArrowRight className="w-4 h-4" />

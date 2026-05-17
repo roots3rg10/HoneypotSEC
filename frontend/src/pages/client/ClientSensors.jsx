@@ -5,6 +5,7 @@ import {
   Terminal, Copy, Check, CheckCircle2, TrendingUp, Wifi, WifiOff,
   History, ChevronLeft, ChevronRight, Database, Download,
   ChevronDown, Key, Code2, FileText, BarChart2, Network,
+  Calendar, Hash, Tag, AlertCircle,
 } from 'lucide-react'
 import {
   getMySensors,
@@ -75,23 +76,38 @@ function fmtTs(ts) {
   })
 }
 
+const EXPORT_COLS = ['timestamp', 'source_ip', 'dest_port', 'country', 'country_code',
+                     'attack_type', 'username', 'password', 'payload', 'protocol',
+                     'session_id', 'honeypot']
+
+const EXPORT_COL_LABELS = {
+  timestamp: 'Timestamp', source_ip: 'IP Origen', dest_port: 'Puerto Destino',
+  country: 'País', country_code: 'Código País', attack_type: 'Tipo de Ataque',
+  username: 'Usuario', password: 'Contraseña', payload: 'Payload',
+  protocol: 'Protocolo', session_id: 'Session ID', honeypot: 'Honeypot',
+}
+
 function downloadCSV(attacks, filename) {
   if (!attacks.length) return
-  const cols = ['timestamp', 'source_ip', 'dest_port', 'country', 'attack_type',
-                 'username', 'password', 'payload', 'session_id', 'honeypot']
-  const header = cols.join(',')
+  const header = EXPORT_COLS.join(',')
   const rows = attacks.map(a =>
-    cols.map(c => {
+    EXPORT_COLS.map(c => {
       const v = a[c] ?? ''
       const s = String(v).replace(/"/g, '""')
       return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s}"` : s
     }).join(',')
   )
-  const blob = new Blob([header + '\n' + rows.join('\n')], { type: 'text/csv' })
+  const bom  = '﻿'  // UTF-8 BOM para compatibilidad con Excel
+  const blob = new Blob([bom + header + '\n' + rows.join('\n')], { type: 'text/csv;charset=utf-8;' })
   const url  = URL.createObjectURL(blob)
   const a    = document.createElement('a')
-  a.href = url; a.download = filename; a.click()
-  URL.revokeObjectURL(url)
+  a.href     = url
+  a.download = filename
+  a.style.display = 'none'
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
 function freq(arr) {
@@ -248,41 +264,118 @@ function TabAtaques({ hpKey, userId, color }) {
 }
 
 // Tab: Exportar
-function TabExportar({ hpKey, userId, retentionDays, color }) {
-  const [loading, setLoading] = useState(false)
+function TabExportar({ hpKey, userId, retentionDays, plan, color }) {
+  const [status, setStatus] = useState('idle')   // idle | loading | success | error
+  const [count,  setCount]  = useState(null)
+
+  const meta = SENSOR_META[hpKey]
+
+  const PLAN_RETENTION_LABEL = { basico: '1 mes', profesional: '3 meses', empresarial: '6 meses' }
+  const retentionLabel = PLAN_RETENTION_LABEL[plan] || `${retentionDays} días`
+
+  useEffect(() => {
+    setCount(null)
+    getMyAttacks({ honeypot: hpKey, tenant_id: userId, limit: 1, days: retentionDays })
+      .then(r => setCount(r.data?.total ?? 0))
+      .catch(() => setCount(0))
+  }, [hpKey, userId, retentionDays])
 
   async function handleExport() {
-    setLoading(true)
+    setStatus('loading')
     try {
       const r = await getMyAttacks({ honeypot: hpKey, tenant_id: userId, limit: 500, days: retentionDays })
-      downloadCSV(r.data?.items || [], `${hpKey}_attacks_${new Date().toISOString().slice(0,10)}.csv`)
-    } catch {}
-    setLoading(false)
+      const items = r.data?.items || []
+      if (!items.length) { setStatus('error'); return }
+      downloadCSV(items, `${hpKey}_attacks_${new Date().toISOString().slice(0, 10)}.csv`)
+      setStatus('success')
+      setTimeout(() => setStatus('idle'), 4000)
+    } catch {
+      setStatus('error')
+      setTimeout(() => setStatus('idle'), 4000)
+    }
   }
 
+  const exportCount = Math.min(count ?? 0, 500)
+
   return (
-    <div className="p-8 flex flex-col items-center gap-4 text-center">
-      <div className="p-4 rounded-2xl" style={{ background: `${color}14`, border: `1px solid ${color}22` }}>
-        <Download className="w-8 h-8" style={{ color }} />
+    <div className="p-6 space-y-5">
+
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div className="p-2.5 rounded-xl" style={{ background: `${color}12`, border: `1px solid ${color}20` }}>
+          <Download className="w-5 h-5" style={{ color }} />
+        </div>
+        <div>
+          <p className="font-bold text-sm" style={{ color: 'var(--txt)' }}>Exportar registros</p>
+          <p className="text-xs" style={{ color: 'var(--txt-3)' }}>{meta?.label || hpKey} · Retención de datos: {retentionLabel}</p>
+        </div>
       </div>
-      <div>
-        <p className="font-bold text-sm" style={{ color: 'var(--txt)' }}>Exportar ataques de {SENSOR_META[hpKey]?.label}</p>
-        <p className="text-xs mt-1" style={{ color: 'var(--txt-3)' }}>
-          Descarga hasta {retentionDays} días de historial en formato CSV
-        </p>
+
+      {/* Stats row */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { icon: Hash,     label: 'Registros a exportar', value: count === null ? '…' : exportCount.toLocaleString('es-ES'), sub: count > 500 ? 'máx. 500 por descarga' : 'todos los registros' },
+          { icon: Calendar, label: 'Período cubierto',     value: retentionLabel,  sub: `últimos ${retentionDays} días` },
+          { icon: Database, label: 'Formato',              value: 'CSV · UTF-8',   sub: 'compatible con Excel' },
+        ].map(({ icon: Icon, label, value, sub }) => (
+          <div key={label} className="rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)' }}>
+            <div className="flex items-center gap-1.5 mb-2">
+              <Icon className="w-3 h-3" style={{ color: 'var(--txt-3)' }} />
+              <p className="text-[9px] uppercase font-bold tracking-widest" style={{ color: 'var(--txt-3)' }}>{label}</p>
+            </div>
+            <p className="font-display font-black text-sm" style={{ color }}>{value}</p>
+            <p className="text-[10px] mt-0.5" style={{ color: 'var(--txt-3)' }}>{sub}</p>
+          </div>
+        ))}
       </div>
-      <button
-        onClick={handleExport}
-        disabled={loading}
-        className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all disabled:opacity-50"
-        style={{ background: color + '18', color, border: `1px solid ${color}30` }}
-      >
-        {loading
-          ? <div className="w-4 h-4 rounded-full animate-spin" style={{ border: '2px solid currentColor', borderTopColor: 'transparent' }} />
-          : <Download className="w-4 h-4" />
-        }
-        {loading ? 'Descargando…' : 'Descargar CSV'}
-      </button>
+
+      {/* Columns */}
+      <div className="rounded-xl p-4 space-y-3" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}>
+        <div className="flex items-center gap-1.5">
+          <Tag className="w-3 h-3" style={{ color: 'var(--txt-3)' }} />
+          <p className="text-[9px] uppercase font-bold tracking-widest" style={{ color: 'var(--txt-3)' }}>Columnas incluidas</p>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {EXPORT_COLS.map(col => (
+            <span key={col}
+              className="flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded"
+              style={{ background: `${color}10`, color, border: `1px solid ${color}20` }}>
+              <CheckCircle2 className="w-2.5 h-2.5" />
+              {EXPORT_COL_LABELS[col]}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Action */}
+      <div className="space-y-3">
+        <button
+          onClick={handleExport}
+          disabled={status === 'loading' || count === 0}
+          className="w-full flex items-center justify-center gap-2.5 py-3 rounded-xl font-bold text-sm transition-all disabled:opacity-40"
+          style={status === 'success'
+            ? { background: 'rgba(52,211,153,0.12)', color: '#34d399', border: '1px solid rgba(52,211,153,0.3)' }
+            : status === 'error'
+            ? { background: 'rgba(251,113,133,0.1)', color: '#fb7185', border: '1px solid rgba(251,113,133,0.25)' }
+            : { background: `${color}18`, color, border: `1px solid ${color}35` }
+          }
+        >
+          {status === 'loading' && <div className="w-4 h-4 rounded-full animate-spin" style={{ border: '2px solid currentColor', borderTopColor: 'transparent' }} />}
+          {status === 'success' && <CheckCircle2 className="w-4 h-4" />}
+          {status === 'error'   && <AlertCircle  className="w-4 h-4" />}
+          {status === 'idle'    && <Download     className="w-4 h-4" />}
+          {status === 'loading' ? 'Generando archivo…'            : ''}
+          {status === 'success' ? 'Descarga completada'           : ''}
+          {status === 'error'   ? 'Error al exportar — Reintentar' : ''}
+          {status === 'idle'    ? `Descargar CSV (${exportCount.toLocaleString('es-ES')} registros)` : ''}
+        </button>
+
+        {count === 0 && (
+          <p className="text-center text-xs" style={{ color: 'var(--txt-3)' }}>
+            Sin registros en el período de retención de tu plan
+          </p>
+        )}
+      </div>
     </div>
   )
 }
@@ -542,7 +635,7 @@ function TabHoneyd({ attacks }) {
 }
 
 // ─── HoneypotDetail (panel expandido) ─────────────────────────
-function HoneypotDetail({ hpKey, userId, hpStat, retentionDays }) {
+function HoneypotDetail({ hpKey, userId, hpStat, retentionDays, plan }) {
   const meta      = SENSOR_META[hpKey]
   const tabs      = HP_TABS[hpKey] || ['Resumen', 'Ataques', 'Exportar']
   const [activeTab, setActiveTab] = useState(tabs[0])
@@ -653,7 +746,7 @@ function HoneypotDetail({ hpKey, userId, hpStat, retentionDays }) {
             <TabAtaques hpKey={hpKey} userId={userId} color={meta.color} />
           )}
           {activeTab === 'Exportar' && (
-            <TabExportar hpKey={hpKey} userId={userId} retentionDays={retentionDays} color={meta.color} />
+            <TabExportar hpKey={hpKey} userId={userId} retentionDays={retentionDays} plan={plan} color={meta.color} />
           )}
           {!['Resumen', 'Ataques', 'Exportar'].includes(activeTab) && renderSpecificTab()}
         </motion.div>
@@ -986,6 +1079,7 @@ export default function ClientSensors() {
                       userId={user?.id}
                       hpStat={hpStat}
                       retentionDays={retentionDays}
+                      plan={plan}
                     />
                   )}
                 </AnimatePresence>

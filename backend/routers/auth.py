@@ -1,5 +1,8 @@
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
+from jose import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -7,9 +10,21 @@ from sqlalchemy.exc import IntegrityError
 from database import get_db
 from models import User
 from schemas import TokenResponse, UserOut, FreemiumRegisterIn, ClientRegisterIn, AdminCreateClientIn, AdminCreateEmployeeIn
-from security import verify_password, hash_password, create_access_token, get_current_user
+from security import verify_password, hash_password, create_access_token, get_current_user, SECRET_KEY, ALGORITHM
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+PAID_PLANS = {"basico", "profesional", "empresarial"}
+
+
+def _auto_generate_install_token(user_id: int, plan: str) -> str:
+    payload = {
+        "type": "sensor_install",
+        "sub":  str(user_id),
+        "plan": plan,
+        "exp":  datetime.now(timezone.utc) + timedelta(hours=72),
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -98,6 +113,13 @@ async def register(
             status_code=status.HTTP_409_CONFLICT,
             detail="El nombre de usuario o email ya está en uso",
         )
+
+    # Auto-generate sensor install token (72 h) for paid plans
+    if data.plan in PAID_PLANS:
+        install_token = _auto_generate_install_token(user.id, data.plan)
+        user.sensor_install_token    = install_token
+        user.sensor_token_created_at = datetime.now(timezone.utc)
+        await db.commit()
 
     token = create_access_token({"sub": str(user.id), "role": user.role})
     return TokenResponse(access_token=token, token_type="bearer", role=user.role)

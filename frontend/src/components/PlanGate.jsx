@@ -6,7 +6,7 @@ import { usePreviewUser } from '../context/PreviewUserContext'
 const PLAN_ORDER = { freemium: 0, basico: 1, profesional: 2, empresarial: 3 }
 const PLAN_LABEL = { basico: 'Básico', profesional: 'Profesional', empresarial: 'Empresarial' }
 const PLAN_COLOR = { basico: 'rgba(148,163,184,0.8)', profesional: '#FBBF24', empresarial: '#fb7185' }
-const PLAN_PRICE = { basico: '€4.99/mes', profesional: '€30/mes', empresarial: '€50/mes' }
+const PLAN_PRICE = { basico: '€5/mes', profesional: '€30/mes', empresarial: '€50/mes' }
 
 export function hasPlan(userPlan, required) {
   return (PLAN_ORDER[userPlan] ?? 0) >= (PLAN_ORDER[required] ?? 0)

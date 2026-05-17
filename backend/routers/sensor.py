@@ -242,6 +242,31 @@ async def get_client_token(
     )
 
 
+@router.get("/my-token", response_model=ClientTokenOut)
+async def get_my_token(
+    db:           AsyncSession = Depends(get_db),
+    current_user: User         = Depends(get_current_user),
+):
+    if current_user.role != "client":
+        raise HTTPException(status_code=403, detail="Solo para clientes")
+
+    if not current_user.sensor_install_token or not current_user.sensor_token_created_at:
+        return ClientTokenOut(has_token=False)
+
+    expires_at = current_user.sensor_token_created_at + timedelta(hours=72)
+    is_expired = datetime.now(timezone.utc) > expires_at
+    cmd        = f"curl -sL {BACKEND_URL}/api/sensor/install | sudo bash -s -- --token {current_user.sensor_install_token}"
+
+    return ClientTokenOut(
+        has_token     = True,
+        install_token = current_user.sensor_install_token,
+        install_cmd   = cmd,
+        created_at    = current_user.sensor_token_created_at,
+        expires_at    = expires_at,
+        is_expired    = is_expired,
+    )
+
+
 @router.delete("/client-token/{client_id}", status_code=204)
 async def revoke_client_token(
     client_id: int,

@@ -3,8 +3,9 @@ import { motion } from 'framer-motion'
 import {
   ShieldAlert, Activity, Globe, Cpu, TrendingUp, TrendingDown,
   AlertTriangle, WifiOff, Terminal, RefreshCw, Clock, Wifi, Server,
+  Copy, Check, Timer, Key,
 } from 'lucide-react'
-import { getClientSummary, getClientOverview, getMyAttacks, getMySensors } from '../../services/api'
+import { getClientSummary, getClientOverview, getMyAttacks, getMySensors, getMyToken } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import { usePreviewUser } from '../../context/PreviewUserContext'
 import AttackMap from '../../components/Dashboard/AttackMap'
@@ -103,59 +104,199 @@ function ThreatLevel({ score, noAttacks }) {
   )
 }
 
+// ── Countdown helper ──────────────────────────────────────────
+
+function useCountdown(expiresAt) {
+  const [remaining, setRemaining] = useState(null)
+  useEffect(() => {
+    if (!expiresAt) return
+    const tick = () => {
+      const ms = new Date(expiresAt).getTime() - Date.now()
+      setRemaining(Math.max(0, ms))
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [expiresAt])
+  if (remaining === null) return null
+  const h = Math.floor(remaining / 3600000)
+  const m = Math.floor((remaining % 3600000) / 60000)
+  const s = Math.floor((remaining % 60000) / 1000)
+  return remaining === 0 ? 'Expirado' : `${h}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`
+}
+
 // ── Estado vacío: sin sensor instalado ────────────────────────
 
 function NoSensorState({ company }) {
+  const [tokenData, setTokenData] = useState(null)
+  const [copied,    setCopied]    = useState(false)
+  const [cmdCopied, setCmdCopied] = useState(false)
+  const countdown = useCountdown(tokenData?.expires_at)
+
+  useEffect(() => {
+    getMyToken().then(r => setTokenData(r.data)).catch(() => {})
+  }, [])
+
+  function copyToken() {
+    if (!tokenData?.install_token) return
+    navigator.clipboard.writeText(tokenData.install_token)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  function copyCmd() {
+    if (!tokenData?.install_cmd) return
+    navigator.clipboard.writeText(tokenData.install_cmd)
+    setCmdCopied(true)
+    setTimeout(() => setCmdCopied(false), 2000)
+  }
+
+  const hasToken   = tokenData?.has_token && !tokenData?.is_expired
+  const isExpired  = tokenData?.is_expired
+  const shortToken = tokenData?.install_token
+    ? tokenData.install_token.slice(0, 32) + '...'
+    : null
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
       className="space-y-5">
 
       {/* Hero card */}
-      <div className="rounded-2xl p-10 flex flex-col items-center gap-6 text-center"
+      <div className="rounded-2xl p-8 flex flex-col items-center gap-5 text-center"
         style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
         <div className="relative">
-          <div className="w-20 h-20 rounded-2xl flex items-center justify-center"
+          <div className="w-18 h-18 w-[72px] h-[72px] rounded-2xl flex items-center justify-center"
             style={{ background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.15)' }}>
-            <WifiOff className="w-9 h-9 text-amber-400" />
+            <WifiOff className="w-8 h-8 text-amber-400" />
           </div>
           <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-400 flex items-center justify-center">
             <span className="text-[8px] font-black text-black">!</span>
           </span>
         </div>
-
-        <div className="space-y-2 max-w-md">
+        <div className="space-y-1.5 max-w-lg">
           <h2 className="font-display font-black text-xl" style={{ color: 'var(--txt)' }}>
             Sensor no instalado
           </h2>
           <p className="text-sm leading-relaxed" style={{ color: 'var(--txt-3)' }}>
-            La cuenta de <strong style={{ color: 'var(--txt)' }}>{company}</strong> está activa
-            pero aún no hay ningún sensor desplegado en tu infraestructura.
-            Los datos aparecerán aquí en tiempo real una vez esté instalado.
+            La cuenta de <strong style={{ color: 'var(--txt)' }}>{company}</strong> está activa.
+            Instala el sensor en tu servidor y los datos empezarán a aparecer aquí en tiempo real.
           </p>
         </div>
       </div>
+
+      {/* Token card */}
+      {hasToken && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1 }}
+          className="rounded-2xl overflow-hidden"
+          style={{ background: 'var(--surface)', border: '1px solid rgba(251,191,36,0.2)', boxShadow: '0 0 30px rgba(251,191,36,0.04)' }}>
+
+          {/* Cabecera */}
+          <div className="px-6 py-4 flex items-center justify-between"
+            style={{ background: 'rgba(251,191,36,0.04)', borderBottom: '1px solid rgba(251,191,36,0.12)' }}>
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 rounded-lg" style={{ background: 'rgba(251,191,36,0.1)' }}>
+                <Key className="w-4 h-4 text-amber-400" />
+              </div>
+              <div>
+                <p className="text-sm font-black text-white">Token de instalación</p>
+                <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.3)' }}>Válido 72h desde la activación de tu plan</p>
+              </div>
+            </div>
+            {countdown && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg"
+                style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.15)' }}>
+                <Timer className="w-3.5 h-3.5 text-amber-400" />
+                <span className="text-xs font-black font-mono text-amber-400">{countdown}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Token display */}
+          <div className="px-6 py-5 space-y-4">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                Tu token único
+              </p>
+              <div className="flex items-center gap-3 p-4 rounded-xl"
+                style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <code className="flex-1 text-xs font-mono text-amber-300 break-all leading-relaxed">
+                  {tokenData.install_token}
+                </code>
+                <button
+                  onClick={copyToken}
+                  className="shrink-0 p-2 rounded-lg transition-all duration-150"
+                  style={{ background: copied ? 'rgba(52,211,153,0.1)' : 'rgba(251,191,36,0.08)', border: `1px solid ${copied ? 'rgba(52,211,153,0.2)' : 'rgba(251,191,36,0.15)'}` }}
+                  title="Copiar token"
+                >
+                  {copied
+                    ? <Check className="w-4 h-4 text-emerald-400" />
+                    : <Copy className="w-4 h-4 text-amber-400" />
+                  }
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                Comando de instalación
+              </p>
+              <div className="flex items-start gap-3 p-4 rounded-xl"
+                style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <Terminal className="w-3.5 h-3.5 shrink-0 text-amber-400 mt-0.5" />
+                <code className="flex-1 text-xs font-mono text-green-300 break-all leading-relaxed">
+                  {tokenData.install_cmd}
+                </code>
+                <button
+                  onClick={copyCmd}
+                  className="shrink-0 p-2 rounded-lg transition-all duration-150"
+                  style={{ background: cmdCopied ? 'rgba(52,211,153,0.1)' : 'rgba(52,211,153,0.04)', border: `1px solid ${cmdCopied ? 'rgba(52,211,153,0.2)' : 'rgba(52,211,153,0.1)'}` }}
+                  title="Copiar comando"
+                >
+                  {cmdCopied
+                    ? <Check className="w-4 h-4 text-emerald-400" />
+                    : <Copy className="w-4 h-4 text-emerald-400" />
+                  }
+                </button>
+              </div>
+              <p className="text-[10px] mt-2" style={{ color: 'rgba(255,255,255,0.2)' }}>
+                Ejecuta este comando como root en el servidor Linux donde quieres instalar el sensor.
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {isExpired && (
+        <div className="flex items-center gap-3 px-5 py-4 rounded-2xl text-sm"
+          style={{ background: 'rgba(244,63,94,0.06)', border: '1px solid rgba(244,63,94,0.15)', color: '#fb7185' }}>
+          <Timer className="w-4 h-4 shrink-0" />
+          Tu token de instalación ha expirado. Contacta con soporte para obtener uno nuevo.
+        </div>
+      )}
 
       {/* Pasos */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           {
             num: '1',
-            title: 'Solicita tu token',
-            desc:  'Contacta con tu gestor de cuenta en HoneypotSEC para obtener el token de instalación personalizado.',
+            title: 'Copia tu token',
+            desc: hasToken
+              ? 'Tu token único está listo arriba. Cópialo con el botón para usarlo en el siguiente paso.'
+              : 'Tu token de instalación personal está disponible en la tarjeta de arriba.',
             color: '#60a5fa',
           },
           {
             num: '2',
             title: 'Ejecuta el instalador',
-            desc:  'En tu servidor Linux, ejecuta el comando que te proporcionaremos. Requiere acceso root.',
+            desc: 'En tu servidor Linux con Docker, ejecuta el comando de instalación como root. El sensor se configurará automáticamente.',
             color: '#FBBF24',
-            code:  'curl -sL .../install | sudo bash',
           },
           {
             num: '3',
             title: 'Datos en tiempo real',
-            desc:  'En minutos los honeypots estarán activos y los ataques comenzarán a aparecer en este panel.',
+            desc: 'En minutos los honeypots estarán activos y los ataques comenzarán a aparecer en este panel.',
             color: '#34d399',
           },
         ].map(step => (
@@ -169,13 +310,6 @@ function NoSensorState({ company }) {
               <p className="text-sm font-bold" style={{ color: 'var(--txt)' }}>{step.title}</p>
             </div>
             <p className="text-xs leading-relaxed" style={{ color: 'var(--txt-3)' }}>{step.desc}</p>
-            {step.code && (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg"
-                style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <Terminal className="w-3 h-3 shrink-0 text-amber-400" />
-                <code className="text-[10px] font-mono text-green-300 truncate">{step.code}</code>
-              </div>
-            )}
           </div>
         ))}
       </div>
@@ -391,56 +525,69 @@ export default function ClientDashboard() {
               {sensors.filter(s => isSensorOnline(s.last_seen)).length} / {sensors.length} en línea
             </span>
           </div>
-          <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+
+          <div className="p-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
             {sensors.map(s => {
               const online = isSensorOnline(s.last_seen)
               return (
-                <div key={s.id} className="px-5 py-3 flex items-center gap-4">
-                  {/* Indicador online/offline */}
-                  <div className="shrink-0 relative">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+                <div key={s.id} className="rounded-xl p-4"
+                  style={{
+                    background: online ? 'rgba(52,211,153,0.03)' : 'rgba(255,255,255,0.02)',
+                    border: `1px solid ${online ? 'rgba(52,211,153,0.15)' : 'rgba(255,255,255,0.06)'}`,
+                  }}>
+
+                  {/* Cabecera: nombre + badge */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="relative shrink-0">
+                        <div className="w-7 h-7 rounded-lg flex items-center justify-center"
+                          style={{
+                            background: online ? 'rgba(52,211,153,0.1)' : 'rgba(255,255,255,0.04)',
+                            border: `1px solid ${online ? 'rgba(52,211,153,0.2)' : 'rgba(255,255,255,0.08)'}`,
+                          }}>
+                          {online
+                            ? <Wifi className="w-3.5 h-3.5 text-emerald-400" />
+                            : <WifiOff className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.2)' }} />}
+                        </div>
+                        {online && (
+                          <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-400"
+                            style={{ boxShadow: '0 0 5px #34d399' }} />
+                        )}
+                      </div>
+                      <p className="text-xs font-bold truncate" style={{ color: 'var(--txt)' }}>
+                        {s.hostname || s.name || `Sensor #${s.id}`}
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 ml-2"
                       style={{
                         background: online ? 'rgba(52,211,153,0.08)' : 'rgba(255,255,255,0.04)',
-                        border: `1px solid ${online ? 'rgba(52,211,153,0.25)' : 'rgba(255,255,255,0.08)'}`,
+                        color:      online ? '#34d399' : 'rgba(255,255,255,0.25)',
+                        border:     `1px solid ${online ? 'rgba(52,211,153,0.2)' : 'rgba(255,255,255,0.06)'}`,
                       }}>
-                      {online
-                        ? <Wifi className="w-3.5 h-3.5 text-emerald-400" />
-                        : <WifiOff className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.25)' }} />}
-                    </div>
-                    {online && (
-                      <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400"
-                        style={{ boxShadow: '0 0 6px #34d399' }} />
-                    )}
+                      {online ? '● Online' : '○ Offline'}
+                    </span>
                   </div>
 
-                  {/* Nombre + hostname */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold truncate" style={{ color: 'var(--txt)' }}>
-                      {s.hostname || s.name || `Sensor #${s.id}`}
+                  {/* IP — elemento principal */}
+                  <div className="rounded-lg px-3 py-2.5 mb-2"
+                    style={{
+                      background: online ? 'rgba(52,211,153,0.06)' : 'rgba(0,0,0,0.25)',
+                      border: `1px solid ${online ? 'rgba(52,211,153,0.12)' : 'rgba(255,255,255,0.05)'}`,
+                    }}>
+                    <p className="text-[10px] font-bold uppercase tracking-widest mb-1"
+                      style={{ color: online ? 'rgba(52,211,153,0.6)' : 'rgba(255,255,255,0.2)' }}>
+                      IP del servidor
                     </p>
-                    <p className="text-[10px] mt-0.5" style={{ color: 'var(--txt-3)' }}>
-                      {lastSeenLabel(s.last_seen)}
-                    </p>
-                  </div>
-
-                  {/* IP */}
-                  <div className="text-right shrink-0">
-                    <p className="text-xs font-mono font-semibold" style={{ color: online ? 'var(--txt-1)' : 'var(--txt-3)' }}>
+                    <p className="font-mono font-black text-lg leading-none"
+                      style={{ color: online ? '#34d399' : 'rgba(255,255,255,0.3)', letterSpacing: '0.04em' }}>
                       {s.ip_address || '—'}
                     </p>
-                    <p className="text-[10px]" style={{ color: 'var(--txt-3)' }}>IP pública</p>
                   </div>
 
-                  {/* Badge estado */}
-                  <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shrink-0"
-                    style={{
-                      background: online ? 'rgba(52,211,153,0.08)' : 'rgba(255,255,255,0.04)',
-                      color:      online ? '#34d399' : 'rgba(255,255,255,0.3)',
-                      border:     `1px solid ${online ? 'rgba(52,211,153,0.2)' : 'rgba(255,255,255,0.08)'}`,
-                      minWidth: '64px', textAlign: 'center',
-                    }}>
-                    {online ? '● Online' : '○ Offline'}
-                  </span>
+                  {/* Última conexión */}
+                  <p className="text-[10px]" style={{ color: 'var(--txt-3)' }}>
+                    Última conexión: {lastSeenLabel(s.last_seen)}
+                  </p>
                 </div>
               )
             })}

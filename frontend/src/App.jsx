@@ -21,6 +21,7 @@ import AdminEmployees      from './pages/AdminEmployees'
 import AdminClients        from './pages/AdminClients'
 import AdminClientView     from './pages/AdminClientView'
 import Academy             from './pages/Academy'
+import Payment             from './pages/Payment'
 import ClientDashboard     from './pages/client/ClientDashboard'
 import ClientSensors       from './pages/client/ClientSensors'
 import ClientAlerts        from './pages/client/ClientAlerts'
@@ -62,6 +63,7 @@ export default function App() {
           <Route path="/"          element={<Landing />}   />
           <Route path="/login"     element={<Login />}     />
           <Route path="/register"  element={<Register />}  />
+          <Route path="/payment"   element={<Payment />}   />
           <Route path="/pricing"   element={<Pricing />}   />
           <Route path="/honeypots"      element={<Honeypots />}    />
           <Route path="/news"           element={<News />}         />
